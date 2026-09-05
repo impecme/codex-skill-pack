@@ -6,10 +6,8 @@
 本项目同时包含：
 
 - 对话式安装入口：`SKILL.md`
-- Codex 插件清单：`.codex-plugin/plugin.json`
-- Codex 安装 Skill：`skills/codex-lazy-pack/SKILL.md`
 - 上游版本锁定清单：`sources.lock.json`
-- 详细安装规则：`skills/codex-lazy-pack/references/conversation-install.md`
+- 详细安装规则：`references/conversation-install.md`
 
 ## 快速开始：通过对话安装
 
@@ -21,7 +19,7 @@
 ```
 
 大模型应先读取 [SKILL.md](SKILL.md) 和
-[对话式安装规则](skills/codex-lazy-pack/references/conversation-install.md)，再检查环境和
+[对话式安装规则](references/conversation-install.md)，再检查环境和
 已有配置，最后逐项安装并报告结果。
 
 ## 安装内容
@@ -94,7 +92,7 @@ commit，检查上游变更，再提交这个懒人包的版本更新。这样�
 ## 插件/MCP扩展
 
 `sources.lock.json` 已预留 `extensions.plugins` 和 `extensions.mcp` 数组。本版不会自动扫描
-或安装未确认的插件、MCP server 或凭证配置。
+或安装未确认的插件、MCP server 或凭证配置。本项目本身不作为 Codex 插件安装。
 
 ## 范围说明
 

@@ -14,4 +14,4 @@
 本入口不执行 PowerShell、Shell 或其他一键安装脚本，也不自动安装未列入 `sources.lock.json` 的插件、MCP server、凭证或额外 Skill。
 
 详细的目标映射、固定 commit 链接和冲突处理规则见：
-`skills/codex-lazy-pack/references/conversation-install.md`。
+`references/conversation-install.md`。
