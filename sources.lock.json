@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "package": {
+    "name": "codex-lazy-pack",
+    "version": "0.1.0"
+  },
+  "generatedAt": "2026-09-05",
+  "sources": [
+    {
+      "id": "sol-luna-engineering-workflow",
+      "kind": "codex-workflow",
+      "repository": "BruceLanLan/sol-luna-engineering-workflow",
+      "url": "https://github.com/BruceLanLan/sol-luna-engineering-workflow",
+      "commit": "ed13d90a055630aa89427b20b8a0a2401dc8a47b",
+      "artifacts": [
+        {
+          "sourcePath": "AGENTS.md",
+          "target": "AGENTS.md",
+          "type": "file"
+        },
+        {
+          "sourcePath": ".codex/config.toml",
+          "target": "config.toml",
+          "type": "file"
+        },
+        {
+          "sourcePath": ".codex/agents/luna-worker.toml",
+          "target": "agents/luna-worker.toml",
+          "type": "file"
+        },
+        {
+          "sourcePath": ".codex/agents/sol-advisor.toml",
+          "target": "agents/sol-advisor.toml",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "id": "mattpocock-engineering",
+      "kind": "skills",
+      "repository": "mattpocock/skills",
+      "url": "https://github.com/mattpocock/skills",
+      "commit": "3cca18b368ae95cdbdebbff572ccafa662551015",
+      "sourceRoot": "skills/engineering",
+      "skills": [
+        "ask-matt",
+        "code-review",
+        "codebase-design",
+        "diagnosing-bugs",
+        "domain-modeling",
+        "grill-with-docs",
+        "implement",
+        "improve-codebase-architecture",
+        "prototype",
+        "research",
+        "resolving-merge-conflicts",
+        "setup-matt-pocock-skills",
+        "tdd",
+        "to-spec",
+        "to-tickets",
+        "triage",
+        "wayfinder",
+        "wizard"
+      ]
+    }
+  ],
+  "extensions": {
+    "plugins": [],
+    "mcp": []
+  }
+}
