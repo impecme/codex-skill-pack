@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "deviceId": "{{DEVICE_ID}}",
+  "deviceLabel": "{{DEVICE_LABEL}}",
+  "vaultPath": "{{VAULT_PATH}}",
+  "syncMode": "syncthing",
+  "backupMode": "github-manual",
+  "gitBackupDevice": {{GIT_BACKUP_DEVICE}},
+  "writePolicy": "tiered",
+  "weeklyAutomationId": null
+}

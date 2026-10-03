@@ -2,16 +2,83 @@
   "schemaVersion": 1,
   "package": {
     "name": "codex-lazy-pack",
-    "version": "0.1.0"
+    "version": "0.6.0"
   },
-  "generatedAt": "2026-09-05",
+  "generatedAt": "2026-10-03",
+  "packs": [
+    {
+      "id": "codex-sol-luna-workflow",
+      "entry": "skills/00-sol-luna-workflow/SKILL.md",
+      "kind": "source-installer",
+      "sourceIds": [
+        "sol-luna-engineering-workflow"
+      ]
+    },
+    {
+      "id": "codex-mattpocock-engineering",
+      "entry": "skills/01-mattpocock-engineering/SKILL.md",
+      "kind": "source-installer",
+      "sourceIds": [
+        "mattpocock-engineering"
+      ]
+    },
+    {
+      "id": "codex-github",
+      "entry": "skills/02-github/SKILL.md",
+      "kind": "source-installer",
+      "sourceIds": [
+        "mathruffian-codex-lazy-packs"
+      ],
+      "sourceSkills": [
+        "skills/03-github"
+      ]
+    },
+    {
+      "id": "codex-obsidian",
+      "entry": "skills/03-obsidian/SKILL.md",
+      "kind": "source-installer",
+      "sourceIds": [
+        "mathruffian-codex-lazy-packs"
+      ],
+      "sourceSkills": [
+        "skills/05-obsidian"
+      ]
+    },
+    {
+      "id": "codex-github-obsidian",
+      "entry": "skills/04-github-obsidian/SKILL.md",
+      "kind": "source-installer",
+      "sourceIds": [
+        "mathruffian-codex-lazy-packs"
+      ],
+      "sourceSkills": [
+        "skills/04-github-obsidian"
+      ]
+    },
+    {
+      "id": "codex-second-brain",
+      "entry": "skills/05-second-brain/SKILL.md",
+      "kind": "bundled-skill-installer",
+      "sourceIds": [
+        "bundled-codex-second-brain"
+      ],
+      "sourceSkills": [
+        "bundled-skills/codex-second-brain"
+      ]
+    }
+  ],
   "sources": [
     {
       "id": "sol-luna-engineering-workflow",
       "kind": "codex-workflow",
-      "repository": "BruceLanLan/sol-luna-engineering-workflow",
-      "url": "https://github.com/BruceLanLan/sol-luna-engineering-workflow",
-      "commit": "ed13d90a055630aa89427b20b8a0a2401dc8a47b",
+      "repository": "impecme/sol-luna-engineering-workflow",
+      "url": "https://github.com/impecme/sol-luna-engineering-workflow",
+      "forkedFrom": {
+        "repository": "BruceLanLan/sol-luna-engineering-workflow",
+        "url": "https://github.com/BruceLanLan/sol-luna-engineering-workflow",
+        "commit": "ed13d90a055630aa89427b20b8a0a2401dc8a47b"
+      },
+      "commit": "ada4058bfa2f6a7c718c72d7c2b9c555eb3eea38",
       "artifacts": [
         {
           "sourcePath": "AGENTS.md",
@@ -34,6 +101,46 @@
           "type": "file"
         }
       ]
+    },
+    {
+      "id": "mathruffian-codex-lazy-packs",
+      "kind": "skills",
+      "repository": "mathruffian-dot/codex-lazy-packs",
+      "url": "https://github.com/mathruffian-dot/codex-lazy-packs",
+      "commit": "574818e2d80b31807b74fcf62dd5b90b9e46ef3f",
+      "sourceRoot": "skills",
+      "skills": [
+        {
+          "sourcePath": "skills/03-github",
+          "target": "codex-github"
+        },
+        {
+          "sourcePath": "skills/04-github-obsidian",
+          "target": "codex-github-obsidian"
+        },
+        {
+          "sourcePath": "skills/05-obsidian",
+          "target": "codex-obsidian"
+        }
+      ]
+    },
+    {
+      "id": "bundled-codex-second-brain",
+      "kind": "bundled-skill",
+      "repository": "impecme/codex-skill-pack",
+      "url": "https://github.com/impecme/codex-skill-pack",
+      "packageVersion": "0.6.0",
+      "vaultSchemaVersion": 2,
+      "deviceConfigSchemaVersion": 2,
+      "sourcePath": "bundled-skills/codex-second-brain",
+      "target": "codex-second-brain",
+      "globalInstructions": {
+        "sourcePath": "bundled-skills/codex-second-brain/assets/global-agents-section.md",
+        "target": "AGENTS.md",
+        "mergeMode": "managed-section",
+        "startMarker": "<!-- codex-second-brain-managed:start -->",
+        "endMarker": "<!-- codex-second-brain-managed:end -->"
+      }
     },
     {
       "id": "mattpocock-engineering",
