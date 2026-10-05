@@ -22,14 +22,14 @@ description: 通过对话安装固定版本的 codex-github-obsidian Skill，用
 - 源目录：skills/04-github-obsidian
 - 目标目录：<SkillRoot>/codex-github-obsidian
 
-<SkillRoot> 默认是 <CodexHome>/skills；如果当前环境使用其他用户级 Skill 目录，以实际发现的目录为准。
+先读取并执行[共享安装规则](../../references/conversation-install.md)的新设备预检，以其确定的 `<SkillRoot>` 为目标；完成后按共享规则分别报告文件安装、客户端发现和功能验证状态。
 
 ## 执行要求
 
 1. 按固定 commit 获取源目录的完整内容，不无提示改用 main 或 master。
 2. 读取目标目录和现有文件。目录不存在时直接标记为待安装；内容相同则标记为 already-current。
-3. 目标目录已存在且内容不同或来源不明时，先展示新增、删除和修改的路径，再备份整个目录。
-4. 通过对话让用户选择替换、手动合并或跳过；未确认时保持 pending，不要静默覆盖。
+3. 目标目录已存在且内容不同或来源不明时，先展示新增、删除和修改的路径。
+4. 通过对话让用户选择替换、手动合并或跳过；确认替换或应用合并后，先备份整个目录再写入。未确认时保持 pending，不要静默覆盖。
 5. 替换或合并后重新读取目标 Skill，确认 frontmatter、目录结构和内容均可读。
 6. 安装阶段只复制 Skill，不执行 GitHub 登录、push、MCP 配置、Vault 写入或跨工具测试。
 

@@ -10,7 +10,7 @@
 
 1. 继续把一个 Obsidian Vault 中的 Markdown 作为唯一事实源，并采用 Foam-inspired Schema 2 的单一工作区和原子笔记原则。
 2. 使用一个路由式 Codex Skill，由全局规则在项目工作中自动执行开工只读、阶段记录和收工；模式名只作为内部动作。
-3. 本机访问优先使用直接文件夹权限；MCP/API 只是未来可单独评估的访问方式，不是 `0.6.0` 或 `05` 的安装内容。
+3. 本机访问优先使用直接文件夹权限；MCP/API 只是未来可单独评估的访问方式，不是当前版本或 `05` 的安装内容。
 4. 同步与备份独立设计：使用 Syncthing 作为设备间主同步通道，GitHub 私有仓库作为手动提交的云端副本；Git 不承担高频实时同步。
 5. 语义检索是后续增强。Khoj 最贴近 Obsidian 第二大脑；AnythingLLM、Onyx 更像独立 RAG/知识平台；Mem0 是 Agent 记忆层，不应替代 Vault。
 6. 不在每一轮对话后写笔记。全局规则只在明确事件上自动维护：经过验证的阶段成果、有持久结果的任务收尾和每周整理。
@@ -241,7 +241,7 @@ OpenAI 官方文档说明，Codex 桌面端的 Scheduled tasks 可以访问本�
 
 ## 在当前懒人包中的落地
 
-懒人包 `0.6.0` 将上述能力实现为本仓库维护的单一 `codex-second-brain` 路由 Skill，并升级到 Vault Schema 2，包含：
+懒人包从 `0.6.0` 起将上述能力实现为本仓库维护的单一 `codex-second-brain` 路由 Skill，并升级到 Vault Schema 2，包含：
 
 - setup、link、startup、checkpoint、shutdown、weekly、promote 和 repair 八种内部动作。
 - 跨设备本地配置、基于 Git 远端的项目识别和统一单 Vault 数据结构。

@@ -1,10 +1,14 @@
 # codex-lazy-pack
 
+> 给执行安装的 Codex：收到本仓库链接或目录后，先读取根目录 [`SKILL.md`](SKILL.md)、
+> [`sources.lock.json`](sources.lock.json) 和[共享安装规则](references/conversation-install.md)，再按用户选择执行 `00`–`05`。
+> 本仓库的根目录和 `skills/` 是安装入口；实际待安装内容由锁文件指定。请先解析入口，再调用具体 Skill 的安装能力。
+
 这是我的个人 Codex 懒人包。它把常用工程工作流、代码工程和 GitHub/Obsidian Skill
 固定到指定 commit，并在仓库内维护个人第二大脑 Skill。新机器上只需要把这个仓库交给大模型，通过对话即可选择并
 完成用户级安装。第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.6.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.6.1`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -12,18 +16,29 @@
 - 独立懒人包：`skills/<name>/SKILL.md`
 - 上游版本锁定清单：[`sources.lock.json`](sources.lock.json)
 - 共享安装规则：[`references/conversation-install.md`](references/conversation-install.md)
+- 安装后验收：[`references/post-install-verification-prompt.md`](references/post-install-verification-prompt.md)
 
 ## 快速开始：通过对话安装
 
 将本仓库链接或目录交给 Codex，并发送：
 
 ```text
-请读取这个 codex-lazy-pack，先列出可用懒人包，让我选择要安装的编号。
-安装前先检查已有配置，冲突时展示差异并询问我，不要静默覆盖。
+请安装 https://github.com/impecme/codex-skill-pack 中的懒人包。
 ```
 
 大模型应先读取 [`SKILL.md`](SKILL.md)，根据你的选择再读取对应的
 `skills/<name>/SKILL.md` 和[对话式安装规则](references/conversation-install.md)，最后逐项安装并报告结果。
+
+未指定编号时，Codex 先展示 `00`–`05` 供你选择；你也可以直接说“全部”。安装前会确认当前客户端的用户级 Skill
+目录、有效全局规则文件，以及 `00` 所需模型是否可用。配置目录和 Skill 目录分别解析，不能只凭目录存在就判定能够加载。
+本次仓库说明和内置资产来自同一份快照；外部来源继续固定到锁文件中的 commit。
+
+完成报告会分别列出“文件安装状态”“Codex 发现状态”和“功能验证状态”。新会话才能完成的检查会标记为待验证；
+安装时不执行 GitHub 登录、Vault 写入等技能业务操作。Matt Pocock 的显式调用配置和缺失依赖按
+[兼容性说明](references/mattpocock-codex-compatibility.md)检查。
+
+安装完成后，Codex 还会提供一份[独立的安装后验证提示词](references/post-install-verification-prompt.md)，供你复制到同一
+Codex profile 的新对话中验收文件安装、客户端发现和只读功能测试。
 
 ## 可用懒人包
 

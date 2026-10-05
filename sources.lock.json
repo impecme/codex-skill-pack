@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "package": {
     "name": "codex-lazy-pack",
-    "version": "0.6.0"
+    "version": "0.6.1"
   },
   "generatedAt": "2026-10-03",
   "packs": [
@@ -129,7 +129,7 @@
       "kind": "bundled-skill",
       "repository": "impecme/codex-skill-pack",
       "url": "https://github.com/impecme/codex-skill-pack",
-      "packageVersion": "0.6.0",
+      "packageVersion": "0.6.1",
       "vaultSchemaVersion": 2,
       "deviceConfigSchemaVersion": 2,
       "sourcePath": "bundled-skills/codex-second-brain",
