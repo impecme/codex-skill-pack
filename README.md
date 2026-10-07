@@ -6,9 +6,10 @@
 
 这是我的个人 Codex 懒人包。它把常用工程工作流、代码工程和 GitHub/Obsidian Skill
 固定到指定 commit，并在仓库内维护个人第二大脑 Skill。新机器上只需要把这个仓库交给大模型，通过对话即可选择并
-完成用户级安装。第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
+完成用户级安装；选择 05 时还会配置本机暂停式 Syncthing 与登录后台启动，不添加远端设备或传输 Vault 内容。
+第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.7.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.8.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -49,7 +50,7 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 | `02` | `codex-github` | GitHub CLI、Git 配置和 GitHub 访问工作流 |
 | `03` | `codex-obsidian` | Obsidian Vault 授权、MCPVault 和读写验证工作流 |
 | `04` | `codex-github-obsidian` | GitHub 与 Obsidian 的联动工作流 |
-| `05` | `codex-second-brain` | 第二大脑 Skill，以及自动融入项目工作的全局规则 |
+| `05` | `codex-second-brain` | 第二大脑 Skill、全局规则、本机 Syncthing 与用户登录后台启动 |
 | `全部` | — | 依次安装 `00` 至 `05` |
 
 对应入口：
@@ -167,11 +168,16 @@ Schema 2 的稳定目录骨架如下：
 └─ attachments/
 ```
 
-安装 `05` 只把 Skill 安装到用户级目录，并把全局规则合并到 `<CodexHome>/AGENTS.md`；不会定位、创建或修改真实 Vault，
-不会写设备配置，也不会配置 Syncthing、GitHub 备份、定时任务或执行迁移。已有 Schema 1 Vault 以后必须在用户明确确认后，
-通过 `repair` 的 Schema 1→2 子动作显式迁移。安装阶段不代办这一步。
+安装 `05` 时，即使尚无第二大脑设备配置，Codex 也会复用或询问本机已存在的 Vault 路径，并安全补齐设备配置、Syncthing profile、根目录 `.stignore`
+和用户登录启动项。目标文件写入前先备份；有远端设备、其他活动文件夹、路径歧义或配置冲突时，停止 Syncthing 相关写入并报告。
+若没有可用的 Vault 路径，或本机同步配置遇到冲突，只暂停 Syncthing 配置，不阻断 Skill、全局规则和其他已选内容的安装；普通项目对话也不会因为第二大脑暂不可用而停止。
+本机监听限制为 loopback，发现/中继/LAN/NAT 关闭，Vault 文件夹保持暂停；不会添加远端设备、打开浏览器、传输 Vault 内容、
+配置 GitHub 备份或创建每周任务。已有 Schema 1 Vault/设备配置不迁移；以后必须由用户明确确认后，通过 `repair` 的 Schema 1→2 子动作迁移。
+启动项显式固定 GUI loopback 与暂停状态，并检查可能覆盖它们的 Syncthing 环境变量。只有本机 API 实际验证到 profile 设备身份、设备列表、目标路径/设备关联、暂停状态和实时连接均符合本机基线，才报告本机配置完成；API 请求禁用代理并拒绝重定向，API 不可用或状态不符时会保留已完成步骤并报告失败。macOS/Linux 新建启动文件采用原子仅创建操作，避免并发时覆盖用户文件。
 
-`05` 不安装 Foam、`foam-cli`、VS Code 扩展或任何 MCP，也不增加本地一键脚本；本次 Schema 2 变化不改变 `00`–`04`。
+`05` 不安装 Foam、`foam-cli`、VS Code 扩展或任何 MCP，也不提供用户自行运行的一键安装器。Codex 在 05 对话中调用内置
+Python 3.8+ 标准库辅助脚本；不自动安装 Python。详细的预检、冲突和安全边界见
+[`syncthing-bootstrap.md`](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)。本次变化不改变 `00`–`04`。
 完整方案见[第二大脑更新方案](references/second-brain-update-options.md)和
 [开源第二大脑组织形式调研](references/open-source-second-brain-organization-research.md)。
 
@@ -195,10 +201,10 @@ Schema 2 的稳定目录骨架如下：
 - 用户未选择编号时只展示清单，不直接修改用户级配置。
 - 大模型直接使用可用的 Codex Skill、文件和仓库工具完成安装。
 - 外部上游内容按 `sources.lock.json` 中的 commit 获取；内置第二大脑 Skill 按懒人包版本和仓库 commit 追踪。
-- 不执行本地一键安装脚本；懒人包安装过程不使用 `npx`、不要求 Node.js、`uv`、Git 或 GitHub CLI。
+- 不提供或要求用户自行运行本地一键安装脚本；只有 05 允许 Codex 调用内置同步辅助脚本。安装过程不使用 `npx`、不要求 Node.js、`uv`、Git 或 GitHub CLI；05 需要已有 Python 3.8+，不会自动安装 Python。
 - GitHub/Obsidian Skill 后续可能会检查或引导这些工具，但那属于主动使用 Skill 的下一步。
 - 不在安装过程中要求 GitHub 登录或自动配置凭证。
-- `05` 安装阶段不定位真实 Vault、不执行 Schema 迁移；Schema 1 到 Schema 2 只能由用户确认后的 `repair` 迁移子动作完成。
+- `05` 只读取设备配置指向的 Vault 路径并维护根目录 `.stignore`，不读取或迁移笔记内容。Schema 1 到 Schema 2 只能由用户确认后的 `repair` 迁移子动作完成。
 - 配置或同名 Skill 冲突时，先展示差异并询问用户。
 - `05` 使用稳定注释标记原位维护 `AGENTS.md` 区块；不得覆盖其他全局规则或追加重复区块。
 - 安装完成后提示是否需要重启 Codex，以便刷新新 Skill。

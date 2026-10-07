@@ -10,7 +10,7 @@
 4. 只创建缺失内容。先使用 Vault 本地模板；首次建库从内置 Schema 2 assets 复制模板和 schema。已有模板、字段和正文不得覆盖，升级只展示差异。
 5. 根索引必须链接 Projects、Areas、Knowledge、Resources 四个 collection index，也可以链接系统清单；项目、Area、Topic 和正式内容按需创建，不预先生成空知识笔记或 Daily index。
 6. 设备配置保持 `schemaVersion: 2`、`syncMode: syncthing`、`backupMode: github-manual`。修改 Vault 路径、设备标签、备份角色、写入策略或自动化 ID 前展示差异；保留未知字段，不保存凭证。
-7. 让用户确认该目录是 Syncthing 中同一个主 Vault 的本机副本；不安装或配置 Syncthing。询问本机是否为唯一 GitHub 人工备份设备；不初始化 Git，不执行 commit、pull 或 push。
+7. 若本 Skill 由懒人包 05 安装流程调用，按 [syncthing-bootstrap.md](syncthing-bootstrap.md) 检查本机同步配置已完成；不得添加远端设备、解除暂停或传输 Vault。普通 setup 不安装、不重配 Syncthing，只确认所选目录对应已配置的主 Vault。本机是否为唯一 GitHub 人工备份设备仍按原流程确认；不初始化 Git，不执行 commit、pull 或 push。
 8. 只有 `gitBackupDevice: true` 的唯一指定设备，在用户提供星期、当地时间和时区后，才创建一个调用 `weekly` 的原生周期任务。它只能写设备独立 Inbox 草案并执行只读健康检查。
 9. 重新读取生成结果，运行只读健康检查，报告 Vault、Schema 2、模板权威位置、同步/备份职责和自动化 ID。原生自动化不可用时保持 ID 为 `null` 并返回手动提示词。
 

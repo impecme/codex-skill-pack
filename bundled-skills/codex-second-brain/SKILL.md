@@ -7,7 +7,7 @@ description: 将个人 Obsidian Markdown 第二大脑自然融入跨设备 Git �
 
 使用一个个人 Obsidian Vault 作为项目上下文和可复用知识的唯一事实源。源码、Issue、Pull Request 和测试产物留在各自仓库中；Vault 只保存摘要、原子笔记和链接。
 
-本 Skill 借鉴 Foam 的单一工作区、原子 Markdown 和 Wikilink 思想，但不安装或配置 Foam、Foam CLI、Obsidian 扩展或 MCP。实际读写只针对已经配置的本地 Vault；不要因为使用本 Skill 安装任何工具。
+本 Skill 借鉴 Foam 的单一工作区、原子 Markdown 和 Wikilink 思想，但不安装或配置 Foam、Foam CLI、Obsidian 扩展或 MCP。实际读写只针对已经配置的本地 Vault；不要因为日常使用本 Skill 安装工具或重配 Syncthing。仅懒人包选择 05/全部时执行一次性本机同步引导，详见 [syncthing-bootstrap.md](references/syncthing-bootstrap.md)。
 
 ## 默认运行方式
 

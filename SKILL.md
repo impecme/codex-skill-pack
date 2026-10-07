@@ -26,7 +26,7 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 | `02` | `codex-github` | 安装 GitHub 连接与 GitHub CLI 工作流 Skill |
 | `03` | `codex-obsidian` | 安装 Obsidian 连接与 Vault 访问工作流 Skill |
 | `04` | `codex-github-obsidian` | 安装 GitHub + Obsidian 联动工作流 Skill |
-| `05` | `codex-second-brain` | 安装第二大脑 Skill，并把自然维护规则合并到用户级 `AGENTS.md` |
+| `05` | `codex-second-brain` | 安装第二大脑 Skill、合并全局规则，并配置本机暂停式 Syncthing |
 | `全部` | — | 依次安装 `00` 至 `05` |
 
 ## 路由规则
@@ -36,9 +36,10 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 3. 用户选择 `00` 时，读取并执行 [`skills/00-sol-luna-workflow/SKILL.md`](skills/00-sol-luna-workflow/SKILL.md)。
 4. 用户选择 `01` 时，读取并执行 [`skills/01-mattpocock-engineering/SKILL.md`](skills/01-mattpocock-engineering/SKILL.md)，安装 18 项 Skill 并按确认流程合并 Matt Pocock 建议区块。
 5. 用户选择 `02`、`03` 或 `04` 时，分别读取并执行对应子 Skill，安装参考仓库中的固定版本 Skill；用户选择 `05`
-   时安装本仓库内置的 `codex-second-brain`，并将其受管自然维护区块合并到 `<CodexHome>/AGENTS.md`。安装阶段均
-   不执行登录、推送、Vault 写入或定时任务创建。
-6. 用户选择“全部”时，依次读取并执行 `00` 至 `05`；任何一个来源出现冲突或失败，都要先报告并遵循冲突规则，不要静默继续覆盖。
+   时安装本仓库内置的 `codex-second-brain`、合并全局规则，并按该入口完成一次性本机 Syncthing 引导。该引导只写设备配置、
+   Syncthing profile、Vault 根目录 `.stignore` 和用户级登录启动项；不读取/改写 Vault 笔记内容、不添加远端设备、不执行 Git 操作。
+6. 用户选择“全部”时，依次读取并执行 `00` 至 `05`。来源安装冲突按对应子 Skill 处理；若仅 05 的 Syncthing 预检冲突，
+   停止本机同步配置但保留其他已完成的 Skill 安装，并报告待处理项。
 7. 外部来源必须按 `sources.lock.json` 中的固定 commit 获取；无法锁定时不得无提示改用 `main`/`master`。内置来源使用同一仓库快照和锁文件中的包版本，并报告可验证的快照身份。
 8. 修改用户级文件前，必须读取现有内容、展示差异并备份；通过对话让用户选择合并、替换或跳过。受管
    `AGENTS.md` 区块使用稳定注释标记，重复安装只能原位更新，不能追加重复区块。`01` 的全局建议区块只写入基础 `AGENTS.md`，
@@ -48,11 +49,11 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 
 ## 共同边界
 
-- 不执行 PowerShell、Shell 或其他一键安装脚本。
-- 懒人包安装阶段不要求额外安装 Node.js、`npx`、`uv`、Git 或 GitHub CLI；这些工具可能由之后主动使用的 GitHub/Obsidian Skill 检查或引导配置。
-- 懒人包安装阶段不执行 GitHub 登录、全局 Git 配置、仓库创建、push、Vault 写入或项目文件修改。
-- 安装 `05` 不等于初始化第二大脑；建库、设备配置、Syncthing/GitHub 角色确认和每周任务仍需之后显式开始。设备配置尚不存在时，
-  全局自然维护规则保持休眠；完成一次性配置后，普通项目工作不再要求用户手动提醒启动、记录或收尾。
+- 不提供或要求用户自行运行一键安装脚本。仅 05 安装阶段允许 Codex 调用内置辅助脚本完成锁定范围内的本机 Syncthing 配置。
+- 懒人包安装阶段不要求额外安装 Node.js、`npx`、`uv`、Git 或 GitHub CLI；05 使用已有 Python 3.8+ 标准库运行辅助脚本，不自动安装 Python。
+- 懒人包安装阶段不执行 GitHub 登录、全局 Git 配置、仓库创建、push、Vault 笔记写入或项目文件修改；05 仅允许写设备配置和 Vault 根目录 `.stignore`。
+- 安装 `05` 完成设备配置和本机 Syncthing 基线，但不初始化 Vault 内容、不配置远端设备，也不设置 GitHub 备份角色或每周任务。
+  配置文件存在且 Vault 可访问后，全局自然维护规则才启用；普通项目工作不要求用户手动提醒启动、记录或收尾。
 - 不自动安装 `sources.lock.json` 之外的 Skill、插件、MCP server 或凭证。
 - 不把 token、密码或其他凭证写入仓库、`AGENTS.md`、Skill 文件或 Obsidian 笔记。
 - 不把本仓库的入口文档复制成用户级 Skill；本仓库是对话式安装入口。
