@@ -32,8 +32,9 @@
 ### 有效全局规则
 
 读取 `<CodexHome>/AGENTS.md` 和 `AGENTS.override.md`。后者存在时按当前客户端规则检查其是否遮蔽 `AGENTS.md`，
-不得仅因基础文件已写入就声称规则生效。不删除、改名或自动复制到 override；提出对有效文件的最小合并差异，
-确认后才应用。用户保留 override 时，可完成原目标安装，但将全局规则发现状态标为 `blocked` 并解释原因。
+不得仅因基础文件已写入就声称规则生效。安装 `01` 的 Matt Pocock 建议区块时，绝不修改、删除、改名或复制到
+`AGENTS.override.md`；只在用户确认后合并到基础 `AGENTS.md`，若 override 遮蔽基础文件则把该区块的生效状态标为
+`blocked`。其他懒人包已有的 override 合并规则仍按对应入口执行。
 项目级规则也可能覆盖全局规则，因此全局规则生效不等于任意项目都会执行同一策略。
 参见 [AGENTS.md 文档](https://developers.openai.com/codex/guides/agents-md)。
 
@@ -69,7 +70,9 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 | `.codex/agents/luna-worker.toml` | `<CodexHome>/agents/luna-worker.toml` |
 | `.codex/agents/sol-advisor.toml` | `<CodexHome>/agents/sol-advisor.toml` |
 
-选择 `01` 时，将第二套来源的以下 18 个目录安装到预检确定的 `<SkillRoot>`：
+选择 `01` 时，将第二套来源的以下 18 个目录安装到预检确定的 `<SkillRoot>`，并把懒人包自带的
+[`global-skill-suggestion-section.md`](../skills/01-mattpocock-engineering/assets/global-skill-suggestion-section.md)
+合并到 `<CodexHome>/AGENTS.md`，使工作对话能在强匹配时建议用户手动调用九个非自动调用 Skill：
 
 `ask-matt`、`code-review`、`codebase-design`、`diagnosing-bugs`、`domain-modeling`、
 `grill-with-docs`、`implement`、`improve-codebase-architecture`、`prototype`、`research`、
@@ -77,6 +80,7 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 `triage`、`wayfinder`、`wizard`。
 
 选择“全部”时，按 `00`、`01`、`02`、`03`、`04`、`05` 的顺序执行。
+`00` 更新基础 `AGENTS.md` 时必须保留其中所有格式有效的其他懒人包受管区块；随后 `01` 再单独合并自己的建议区块。
 
 选择 `02` 至 `04` 时，安装第三个来源中的以下 Skill。安装阶段只复制固定版本的 Skill
 目录，不执行这些 Skill 的登录、推送、MCP 配置或 Vault 写入动作：
@@ -108,7 +112,9 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 
 ### `AGENTS.md` 受管区块
 
-第二大脑全局规则由以下稳定标记包围：
+懒人包在基础 `<CodexHome>/AGENTS.md` 中分别维护第二大脑规则和 Matt Pocock 技能建议；每个区块只由自己的稳定标记包围。
+
+第二大脑全局规则标记：
 
 ```text
 <!-- codex-second-brain-managed:start -->
@@ -116,11 +122,25 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 <!-- codex-second-brain-managed:end -->
 ```
 
-1. 写入前读取并备份整个 `<CodexHome>/AGENTS.md`，展示新建、追加或替换区块的差异。
-2. 标记不存在时，在用户确认后把源区块追加到文件末尾；不要修改其余规则。
-3. 标记恰好存在一次时，只比较并原位更新该区块；内容相同则标记 `already-current`。
-4. 标记残缺、嵌套或重复时停止自动修改，保留原文件并报告 `pending`。
-5. 安装或更新 `00` 的工作流 `AGENTS.md` 时保留该受管区块；执行“全部”时先安装 `00`，再由 `05` 合并或更新区块。
+Matt Pocock 技能建议区块标记：
+
+```text
+<!-- codex-lazy-pack-matt-skills-managed:start -->
+...
+<!-- codex-lazy-pack-matt-skills-managed:end -->
+```
+
+1. 合并 `01` 区块前，读取基础 `AGENTS.md` 与 `AGENTS.override.md`；即使 override 遮蔽基础文件，也不得把该建议规则写入 override。
+2. 若目标区块内容相同则标记 `already-current`。否则先读取当前文件、备份整个已有 `AGENTS.md` 到
+   `<CodexHome>/lazy-pack/backups/<timestamp>/`，展示只涉及该区块的新增、追加或替换差异，并等待用户确认；用户跳过时保留原文件，
+   但仍可独立安装 18 个 Skill。
+3. 起止标记都不存在时，在用户确认后把源区块追加到文件末尾；不要修改文件中其余用户规则或其他懒人包区块。
+4. 起止标记恰好各出现一次且顺序正确时，只比较并原位更新该区块；其他区块及区块外内容逐字保留。
+5. 标记残缺、顺序错误、嵌套或重复时停止自动修改，保留原文件并报告 `pending`；不尝试修补标记。
+6. 新建、更新、跳过或无法合并都作为独立状态记录；若 `AGENTS.override.md` 当前遮蔽基础文件，建议区块报告 `blocked`（同时注明基础文件区块本身是否已安装）。
+7. 安装或更新 `00` 的工作流 `AGENTS.md` 时，识别并保留所有格式有效的懒人包受管区块，包括
+   `codex-second-brain-managed` 和 `codex-lazy-pack-matt-skills-managed`；遇到非本懒人包的成对标记区块也不得无故删除。
+   执行“全部”时先安装 `00`，再由 `01` 合并建议区块，后续 `05` 再合并第二大脑区块。
 
 ### 同名 Skill
 
@@ -146,6 +166,10 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 安装阶段不运行技能业务，仅结构验证不能填 `verified` 的业务结论。Matt Pocock 的校验警告和依赖按
 [兼容性说明](mattpocock-codex-compatibility.md)记录。
 
+`01` 还要单独报告 Matt Pocock 建议区块的状态（`installed`、`already-current`、`skipped`、`pending` 或
+`blocked`）、基础规则目标、备份位置，以及客户端是否以 `AGENTS.override.md` 遮蔽基础文件。此状态不与 18 个 Skill
+的文件安装状态合并；九项上游 Skill 的隐式调用限制仍按原样保留，不能因为建议区块已安装就声称它们已能手动调用。
+
 ### 提供安装后验证提示词
 
 本次实际执行了安装或更新时，最终回复前读取[安装后验证提示词](post-install-verification-prompt.md)，并将其完整作为独立代码块提供，方便用户直接复制到同一 Codex profile 的新对话。
@@ -160,6 +184,7 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 - 实际执行的懒人包编号。
 - 实际执行来源使用的 commit（只报告实际执行的来源）。
 - `00` 的 4 个工作流文件、`01` 的 18 个 Skill，以及 `02` 至 `05` 的逐项状态。
+- `01` 的 Matt Pocock 建议区块状态、目标 `AGENTS.md`、备份和 override 遮蔽情况；与 Skill 文件状态分开报告。
 - 用户级 Codex 目录和 Skill 目录。
 - 备份目录、待处理冲突和需要重启 Codex 的提示。
 - 未执行的插件/MCP/凭证配置。

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "package": {
     "name": "codex-lazy-pack",
-    "version": "0.6.1"
+    "version": "0.7.0"
   },
-  "generatedAt": "2026-10-03",
+  "generatedAt": "2026-10-07",
   "packs": [
     {
       "id": "codex-sol-luna-workflow",
@@ -129,7 +129,7 @@
       "kind": "bundled-skill",
       "repository": "impecme/codex-skill-pack",
       "url": "https://github.com/impecme/codex-skill-pack",
-      "packageVersion": "0.6.1",
+      "packageVersion": "0.7.0",
       "vaultSchemaVersion": 2,
       "deviceConfigSchemaVersion": 2,
       "sourcePath": "bundled-skills/codex-second-brain",
@@ -168,7 +168,14 @@
         "triage",
         "wayfinder",
         "wizard"
-      ]
+      ],
+      "globalInstructions": {
+        "sourcePath": "skills/01-mattpocock-engineering/assets/global-skill-suggestion-section.md",
+        "target": "AGENTS.md",
+        "mergeMode": "managed-section",
+        "startMarker": "<!-- codex-lazy-pack-matt-skills-managed:start -->",
+        "endMarker": "<!-- codex-lazy-pack-matt-skills-managed:end -->"
+      }
     }
   ],
   "extensions": {

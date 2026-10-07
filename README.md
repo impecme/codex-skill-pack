@@ -8,7 +8,7 @@
 固定到指定 commit，并在仓库内维护个人第二大脑 Skill。新机器上只需要把这个仓库交给大模型，通过对话即可选择并
 完成用户级安装。第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.6.1`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.7.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -34,7 +34,7 @@
 本次仓库说明和内置资产来自同一份快照；外部来源继续固定到锁文件中的 commit。
 
 完成报告会分别列出“文件安装状态”“Codex 发现状态”和“功能验证状态”。新会话才能完成的检查会标记为待验证；
-安装时不执行 GitHub 登录、Vault 写入等技能业务操作。Matt Pocock 的显式调用配置和缺失依赖按
+安装时不执行 GitHub 登录、Vault 写入等技能业务操作。Matt Pocock 的隐式调用限制、全局建议区块和缺失依赖按
 [兼容性说明](references/mattpocock-codex-compatibility.md)检查。
 
 安装完成后，Codex 还会提供一份[独立的安装后验证提示词](references/post-install-verification-prompt.md)，供你复制到同一
@@ -45,7 +45,7 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 | 编号 | 名称 | 内容 |
 | --- | --- | --- |
 | `00` | `codex-sol-luna-workflow` | Luna/Sol 工程工作流配置、`AGENTS.md` 和两个 agent 配置 |
-| `01` | `codex-mattpocock-engineering` | `mattpocock/skills` Engineering 目录的 18 项技能 |
+| `01` | `codex-mattpocock-engineering` | `mattpocock/skills` Engineering 目录的 18 项技能，以及对九项非自动调用 Skill 的全局建议规则 |
 | `02` | `codex-github` | GitHub CLI、Git 配置和 GitHub 访问工作流 |
 | `03` | `codex-obsidian` | Obsidian Vault 授权、MCPVault 和读写验证工作流 |
 | `04` | `codex-github-obsidian` | GitHub 与 Obsidian 的联动工作流 |
@@ -92,6 +92,11 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 `grill-with-docs`、`implement`、`improve-codebase-architecture`、`prototype`、`research`、
 `resolving-merge-conflicts`、`setup-matt-pocock-skills`、`tdd`、`to-spec`、`to-tickets`、
 `triage`、`wayfinder`、`wizard`。
+
+同时，`01` 会按确认流程把[全局建议规则](skills/01-mattpocock-engineering/assets/global-skill-suggestion-section.md)合并到用户级
+`<CodexHome>/AGENTS.md`。它会在具体工作与某项 Skill 高度匹配时推荐一项手动调用并等待你选择；拒绝后照常继续，不会自动启动 Skill。
+规则只修改自己的受管区块，保留其他全局内容；若 `AGENTS.override.md` 遮蔽基础文件，不修改 override，并把有效状态报告为 `blocked`。
+上游九项 Skill 的自动调用限制保持原样，手动调用菜单是否可用仍按当前客户端单独验证。
 
 ## 02–04：GitHub 与 Obsidian 相关 Skill
 

@@ -33,7 +33,7 @@ description: 通过对话安装固定 commit 的 Luna/Sol Codex 工程工作流�
 
 4. 每个目标文件都先与现有文件比较。相同则标记 `already-current`；不同则展示差异、备份现有文件，再让用户选择手动合并、使用上游版本或保留现有版本。
    更新 `AGENTS.md` 时，识别并保留由其他懒人包以成对注释标记的受管区块；尤其不得因应用工作流上游版本而删除
-   `codex-second-brain-managed` 区块。发现残缺或重复标记时停止自动合并并报告冲突。
+   `codex-second-brain-managed` 和 `codex-lazy-pack-matt-skills-managed` 区块。发现残缺或重复标记时停止自动合并并报告冲突。
 5. 无法安全判断 TOML 语义时，不猜测合并结果；保留双方文件并将该项标记为 `pending`。
 6. 按共享规则分别报告四个文件安装、全局规则发现和模型配置验证状态，以及来源 commit、路径、备份和待处理项。
 
