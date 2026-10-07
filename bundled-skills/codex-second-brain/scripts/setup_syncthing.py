@@ -45,6 +45,7 @@ from urllib.request import (
 PACK_ROOT = Path(__file__).resolve().parents[3]
 LOCK_FILE = PACK_ROOT / "sources.lock.json"
 DEVICE_CONFIG_RELATIVE = Path("second-brain") / "config.json"
+SYNC_ONBOARDING_RELATIVE = Path("second-brain") / "sync-onboarding.json"
 IGNORE_RULES = ("/.git", "/.claudian", "/.obsidian/workspace*")
 IGNORE_START = "// codex-second-brain-syncthing-managed:start"
 IGNORE_END = "// codex-second-brain-syncthing-managed:end"
@@ -66,8 +67,20 @@ SYNCTHING_ENVIRONMENT_KEYS = (
     "STDATADIR",
 )
 LOCAL_GUI_ADDRESS = "127.0.0.1:8384"
+PAIRED_LISTENERS = (
+    "tcp://127.0.0.1:22000",
+    "dynamic+https://relays.syncthing.net/endpoint",
+)
+PAIRED_NETWORK_OPTIONS = {
+    "globalAnnounceEnabled": "true",
+    "localAnnounceEnabled": "false",
+    "relaysEnabled": "true",
+    "natEnabled": "false",
+    "startBrowser": "false",
+    "announceLANAddresses": "false",
+}
 SUPPORTED_MIN_VERSION = (2, 1, 5)
-USER_AGENT = "codex-lazy-pack/0.8.0 Syncthing bootstrap"
+USER_AGENT = "codex-lazy-pack/0.10.0 Syncthing bootstrap"
 _SNAPSHOT_UNSET = object()
 _PROGRESS: dict[str, Any] = {"phase": "idle", "completed": [], "backupPath": None}
 
@@ -183,7 +196,7 @@ def is_inside_git_repository(path: str | Path) -> bool:
 
 
 def read_device_config(
-    codex_home: Path, supplied_vault: str | None
+    codex_home: Path, supplied_vault: str | None, *, role: str = "primary", allow_missing_vault: bool = False
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path, bytes | None]:
     config_path = codex_home / DEVICE_CONFIG_RELATIVE
     if (config_path.parent.is_symlink() or config_path.is_symlink()):
@@ -215,9 +228,16 @@ def read_device_config(
     expanded_vault = Path(os.path.expandvars(os.path.expanduser(chosen)))
     if not expanded_vault.is_absolute():
         raise SetupError("vault-path-invalid", "Vault 路径必须是绝对路径；未修改设备配置。")
+    if expanded_vault.is_symlink():
+        raise SetupError("vault-path-conflict", "Vault 根目录是符号链接，未修改设备配置。")
     vault_path = expanded_vault.resolve()
-    if not vault_path.exists() or not vault_path.is_dir():
+    if vault_path.exists() and not vault_path.is_dir():
         raise SetupError("vault-path-missing", "Vault 路径不存在或不是目录；没有创建目录。")
+    if not vault_path.exists():
+        if not allow_missing_vault or role != "server":
+            raise SetupError("vault-path-missing", "Vault 路径不存在；只有经用户确认的服务器接收目录可以在 apply 阶段创建。")
+        if vault_path == vault_path.parent or not vault_path.parent.is_dir() or vault_path.parent.is_symlink():
+            raise SetupError("server-vault-parent-invalid", "服务器 Vault 的父目录不存在、不是普通目录或为符号链接；未创建目录。")
     if supplied_vault and configured_vault and not same_path(supplied_vault, configured_vault):
         raise SetupError("vault-path-conflict", "输入路径与设备配置中的 Vault 路径不一致，未覆盖配置。")
 
@@ -230,7 +250,11 @@ def read_device_config(
     updated["vaultPath"] = str(vault_path)
     updated.setdefault("syncMode", "syncthing")
     updated.setdefault("backupMode", "github-manual")
-    updated.setdefault("gitBackupDevice", False)
+    expected_backup_role = role == "primary"
+    existing_backup_role = original.get("gitBackupDevice")
+    if type(existing_backup_role) is bool and existing_backup_role != expected_backup_role:
+        raise SetupError("backup-role-conflict", "现有设备配置的 GitHub 备份角色与本次确认的 primary/server 角色冲突；未修改。")
+    updated["gitBackupDevice"] = expected_backup_role
     updated.setdefault("writePolicy", "tiered")
     updated.setdefault("weeklyAutomationId", None)
     if updated.get("syncMode") != "syncthing":
@@ -410,7 +434,7 @@ def current_windows_user_ids() -> set[str]:
 
 
 def validate_syncthing_environment(values: dict[str, str]) -> None:
-    """Reject inherited settings that could escape the local-only paused baseline."""
+    """Reject inherited settings that could redirect the profile or override persisted pause state."""
     for key in ("STHOMEDIR", "STCONFDIR", "STDATADIR"):
         if values.get(key, "").strip():
             raise SetupError(
@@ -423,21 +447,15 @@ def validate_syncthing_environment(values: dict[str, str]) -> None:
             "unsafe-environment-override",
             "Syncthing 环境变量 STGUIADDRESS 与本机 GUI 地址冲突；未启动或改写启动项。",
         )
-    for key, unsafe_value in (("STUNPAUSED", "true"), ("STPAUSED", "false")):
+    for key in ("STUNPAUSED", "STPAUSED"):
         value = values.get(key)
         if value is None:
             continue
         normalized = value.strip().casefold()
-        if normalized not in {"true", "false", "1", "0"}:
+        if normalized:
             raise SetupError(
                 "unsafe-environment-override",
-                f"Syncthing 环境变量 {key} 不是可识别的布尔值；未启动或改写启动项。",
-            )
-        truthy = normalized in {"true", "1"}
-        if truthy == (unsafe_value == "true"):
-            raise SetupError(
-                "unsafe-environment-override",
-                f"Syncthing 环境变量 {key} 会覆盖本机暂停策略；未启动或改写启动项。",
+                f"Syncthing 环境变量 {key} 会覆盖配置中保存的同步暂停状态；未启动或改写启动项。",
             )
 
 
@@ -1217,6 +1235,16 @@ def startup_for_profile(entries: list[StartupEntry], profile: Path) -> StartupEn
     return matching[0] if matching else None
 
 
+def linux_headless_or_ssh() -> bool:
+    if platform.system().lower() != "linux":
+        return False
+    return bool(
+        os.environ.get("SSH_CONNECTION")
+        or os.environ.get("SSH_CLIENT")
+        or not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    )
+
+
 def process_targets_profile(entry: StartupEntry, profile: Path) -> bool:
     if entry.kind != "process":
         return False
@@ -1233,8 +1261,6 @@ def desired_arguments(profile: Path) -> list[str]:
         f"--gui-address={LOCAL_GUI_ADDRESS}",
         "--no-browser",
         "--no-upgrade",
-        "--unpaused=false",
-        "--paused",
     ]
     if platform.system().lower() == "windows":
         result.append("--no-console")
@@ -1299,23 +1325,13 @@ def startup_is_safe(entry: StartupEntry, profile: Path) -> bool:
         return False
     if len(gui_addresses) > 1 or any(address != LOCAL_GUI_ADDRESS for address in gui_addresses):
         return False
-    if len(paused_options) > 2:
-        return False
-    if any(
-        (option == "paused" and value != "true")
-        or (option == "unpaused" and value != "false")
-        or option not in {"paused", "unpaused"}
-        for option, value in paused_options
-    ):
-        return False
-    if len({option for option, _ in paused_options}) != len(paused_options):
+    if paused_options:
         return False
     if entry.kind == "process" and (
         gui_addresses != [LOCAL_GUI_ADDRESS]
-        or set(paused_options) != {("unpaused", "false"), ("paused", "true")}
+        or paused_options
     ):
-        # A running process cannot be inspected for its original environment;
-        # require explicit command-line overrides before trusting its state.
+        # Persisted folder state, not process arguments, controls whether sync is active.
         return False
     home = entry.home or str(default_profile_dirs()[0])
     return (
@@ -1380,6 +1396,119 @@ def validate_profile(root: ET.Element, vault: Path) -> dict[str, Any]:
     return state
 
 
+def validate_existing_pair_profile(root: ET.Element, vault: Path, role: str, onboarding: dict[str, Any]) -> dict[str, Any]:
+    """Read-only validation for a recorded pair stage; never applies first-install defaults."""
+    stage = onboarding.get("status")
+    expected_modes = {
+        "primary": {
+            "paired-paused": "sendonly",
+            "seeding": "sendonly",
+            "primary-promoted": "sendreceive",
+            "active": "sendreceive",
+        },
+        "server": {
+            "paired-paused": "receiveonly",
+            "receiver-ready": "receiveonly",
+            "seed-verified": "receiveonly",
+            "server-promoted": "sendreceive",
+            "active": "sendreceive",
+        },
+    }
+    expected_type = expected_modes.get(role, {}).get(stage)
+    if expected_type is None:
+        raise SetupError("paired-onboarding-stage-invalid", "同步阶段没有已知的双机配置要求；不修改现有 profile。")
+    own_id = onboarding.get("syncthingDeviceId")
+    peer_id = onboarding.get("peerSyncthingDeviceId")
+    if not isinstance(own_id, str) or not own_id.strip() or not isinstance(peer_id, str) or not peer_id.strip():
+        raise SetupError("paired-device-identity-missing", "同步状态已记录配对阶段，但缺少绑定的本机/对端 Syncthing Device ID；保留现有配置，不重置。")
+    own_normalized = _normalized_device_id(own_id)
+    peer_normalized = _normalized_device_id(peer_id)
+    if own_normalized == peer_normalized:
+        raise SetupError("paired-device-identity-conflict", "同步状态把本机和对端绑定为同一设备；不修改现有配置。")
+
+    devices = [item for item in list(root) if _xml_name(item) == "device"]
+    configured_ids = [item.get("id", "").strip() for item in devices]
+    normalized_ids = [_normalized_device_id(value) for value in configured_ids]
+    if (len(devices) != 2 or any(not value for value in configured_ids)
+            or len(set(normalized_ids)) != len(normalized_ids)
+            or set(normalized_ids) != {own_normalized, peer_normalized}):
+        raise SetupError("paired-device-config-conflict", "同步 profile 中的设备表与已记录的唯一双机身份不符；只读保留，不重置。")
+
+    folders = [item for item in list(root) if _xml_name(item) == "folder"]
+    matches = [item for item in folders if item.get("id") == FOLDER_ID or
+               (item.get("path") and same_path(item.get("path", ""), vault))]
+    if (len(matches) != 1 or matches[0].get("id") != FOLDER_ID
+            or not matches[0].get("path") or not same_path(matches[0].get("path", ""), vault)):
+        raise SetupError("paired-vault-folder-conflict", "同步 profile 的固定 folder ID 与本机 Vault 路径无法唯一匹配；不修改。")
+    folder = matches[0]
+    if folder.get("type") != expected_type:
+        raise SetupError("paired-vault-folder-mode-conflict", f"同步阶段 {stage} 要求 folder 为 {expected_type}，实际模式不符；不更改同步方向。")
+    paused_nodes = [node for node in list(folder) if _xml_name(node) == "paused"]
+    if len(paused_nodes) > 1 or (folder.get("paused") is not None and paused_nodes):
+        raise SetupError("paired-folder-paused-ambiguous", "目标 folder 的暂停配置重复或冲突；不修改。")
+    members = [node.get("id", "").strip() for node in list(folder) if _xml_name(node) == "device"]
+    normalized_members = [_normalized_device_id(value) for value in members]
+    if (len(members) != 2 or any(not value for value in members)
+            or len(set(normalized_members)) != 2
+            or set(normalized_members) != {own_normalized, peer_normalized}):
+        raise SetupError("paired-folder-membership-conflict", "Vault folder 成员与已记录的双机身份不符；不修改。")
+
+    local_devices = [item for item in devices if _normalized_device_id(item.get("id", "")) == own_normalized]
+    peer_devices = [item for item in devices if _normalized_device_id(item.get("id", "")) == peer_normalized]
+    if len(local_devices) != 1 or len(peer_devices) != 1:
+        raise SetupError("paired-device-config-conflict", "本机或对端设备记录无法唯一识别；不修改。")
+    peer_paused_text = _xml_text(peer_devices[0], "paused", peer_devices[0].get("paused", "false")).strip().lower()
+    if peer_paused_text not in {"true", "false"}:
+        raise SetupError("paired-peer-paused-invalid", "对端暂停状态无法从 profile 核验；不修改。")
+    peer_paused = peer_paused_text == "true"
+
+    options_nodes = [node for node in list(root) if _xml_name(node) == "options"]
+    gui_nodes = [node for node in list(root) if _xml_name(node) == "gui"]
+    if len(options_nodes) > 1 or len(gui_nodes) > 1:
+        raise SetupError("paired-config-ambiguous", "profile 含重复 options/GUI 节点；不修改。")
+    options = options_nodes[0] if options_nodes else None
+    if options is not None:
+        for field in (*NETWORK_FALSE_FIELDS, "announceLANAddresses"):
+            if sum(1 for node in list(options) if _xml_name(node) == field) > 1:
+                raise SetupError("paired-config-ambiguous", f"profile 的网络字段 {field} 重复；不修改。")
+    listen_addresses = [node.text.strip() for node in (list(options) if options is not None else [])
+                        if _xml_name(node) == "listenAddress" and node.text and node.text.strip()]
+    gui = gui_nodes[0] if gui_nodes else None
+    gui_addresses = [node for node in list(gui) if _xml_name(node) == "address"] if gui is not None else []
+    if len(gui_addresses) > 1:
+        raise SetupError("paired-config-ambiguous", "profile 的 GUI 地址重复；不修改。")
+    options_state = {
+        field: _xml_text(options, field, "") if options is not None else ""
+        for field in (*NETWORK_FALSE_FIELDS, "announceLANAddresses")
+    }
+    actual_network = {key: value.strip().lower() for key, value in options_state.items()}
+    gui_address = (gui_addresses[0].text or "").strip() if gui_addresses else ""
+    if (set(listen_addresses) != set(PAIRED_LISTENERS)
+            or len(listen_addresses) != len(PAIRED_LISTENERS)
+            or actual_network != PAIRED_NETWORK_OPTIONS
+            or gui_address != LOCAL_GUI_ADDRESS):
+        raise SetupError("paired-network-policy-conflict", "已配对 profile 的监听、发现、中继、NAT、浏览器或 GUI 策略与确认基线不符；不覆盖用户配置。")
+    folder_paused_value = folder_paused(folder)
+    if stage == "paired-paused" and (folder_paused_value is not True or peer_paused is not True):
+        raise SetupError("paired-paused-state-conflict", "引导状态为 paired-paused，但 folder 或对端未保持暂停；不修改并停止后续阶段。")
+    return {
+        "verification": "recorded-pair-stage-static-config",
+        "onboardingStatus": stage,
+        "localDeviceId": own_id,
+        "peerDeviceId": peer_id,
+        "remoteDeviceCount": 1,
+        "folderId": FOLDER_ID,
+        "folderType": folder.get("type"),
+        "folderPaused": folder_paused_value,
+        "peerPaused": peer_paused,
+        "folderPathMatches": True,
+        "network": options_state,
+        "listenAddress": listen_addresses,
+        "guiAddress": (gui_addresses[0].text or "").strip() if gui_addresses else "",
+        "role": role,
+    }
+
+
 def xml_bytes_from_path(path: Path, vault: Path) -> tuple[bytes, dict[str, Any]]:
     root = inspect_xml(path)
     state = patch_config(root, vault)
@@ -1397,6 +1526,31 @@ def snapshot_file(path: Path, label: str) -> bytes | None:
         return path.read_bytes()
     except OSError as exc:
         raise SetupError("target-unreadable", f"{label} 无法安全读取，未修改。") from exc
+
+
+def durable_replace_file(source: str | Path, destination: Path) -> None:
+    """Atomically replace a file and flush the directory entry before returning."""
+    if platform.system().lower() == "windows":
+        import ctypes
+
+        move_file_ex = ctypes.WinDLL("kernel32", use_last_error=True).MoveFileExW
+        move_file_ex.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint]
+        move_file_ex.restype = ctypes.c_int
+        flags = 0x1 | 0x8  # MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH
+        if not move_file_ex(str(source), str(destination), flags):
+            error = ctypes.get_last_error()
+            raise OSError(error, "MoveFileExW durable replacement failed", str(destination))
+        return
+    os.replace(source, destination)
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        directory_fd = os.open(destination.parent, directory_flags)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except OSError as exc:
+        raise SetupError("target-directory-sync-failed", "原子替换后的父目录无法持久化；没有开始依赖该状态的后续操作。") from exc
 
 
 def write_atomic(
@@ -1422,7 +1576,7 @@ def write_atomic(
             os.chmod(temp_name, mode)
         if expected_current is not _SNAPSHOT_UNSET and snapshot_file(path, path.name) != expected_current:
             raise SetupError("concurrent-file-change", f"{path.name} 在安装期间发生变化，未覆盖。")
-        os.replace(temp_name, path)
+        durable_replace_file(temp_name, path)
     except Exception:
         try:
             os.unlink(temp_name)
@@ -1576,8 +1730,6 @@ def _launch_agent(executable: Path, profile: Path) -> bytes:
         "ProgramArguments": [str(executable), *desired_arguments(profile)],
         "EnvironmentVariables": {
             "STGUIADDRESS": LOCAL_GUI_ADDRESS,
-            "STUNPAUSED": "false",
-            "STPAUSED": "true",
         },
         "RunAtLoad": True,
         "KeepAlive": True,
@@ -1588,9 +1740,9 @@ def _launch_agent(executable: Path, profile: Path) -> bytes:
 def _systemd_unit(executable: Path, profile: Path) -> bytes:
     args = shlex.join([str(executable), *desired_arguments(profile)])
     content = (
-        "[Unit]\nDescription=Codex Second Brain Syncthing (local only)\nAfter=default.target\n\n"
+        "[Unit]\nDescription=Codex Second Brain Syncthing\nAfter=default.target\n\n"
         "[Service]\nType=simple\n"
-        f"Environment=STGUIADDRESS={LOCAL_GUI_ADDRESS}\nEnvironment=STUNPAUSED=false\nEnvironment=STPAUSED=true\n"
+        f"Environment=STGUIADDRESS={LOCAL_GUI_ADDRESS}\n"
         "ExecStart=" + args + "\nRestart=on-failure\nRestartSec=5\n\n"
         "[Install]\nWantedBy=default.target\n"
     )
@@ -1611,13 +1763,31 @@ def _xdg_desktop(executable: Path, profile: Path) -> bytes:
     ).encode("utf-8")
 
 
+def _require_ssh_linger() -> str | None:
+    headless = not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    if not (os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_CLIENT") or headless):
+        return None
+    loginctl = shutil.which("loginctl")
+    user = os.environ.get("USER") or ""
+    linger = run([loginctl, "show-user", user, "--property=Linger", "--value"], timeout=10) if loginctl and user else None
+    if linger is None or linger.returncode != 0 or linger.stdout.strip().casefold() not in {"yes", "true"}:
+        raise SetupError(
+            "linger-required",
+            f"SSH 服务器需要为用户 {user or '<当前用户>'} 启用 systemd linger，才能在 SSH 注销后持续运行。请由你在服务器上执行 `sudo loginctl enable-linger {user or '<用户名>'}`，完成后重新运行 05；本次尚未创建或复用服务。",
+        )
+    return user
+
+
 def register_startup(executable: Path, profile: Path, existing: StartupEntry | None) -> dict[str, Any]:
     if existing:
+        if linux_headless_or_ssh() and existing.kind == "xdg-autostart":
+            raise SetupError("headless-xdg-conflict", "SSH/无桌面 Linux 不得复用桌面 XDG 自启动项；请先确认 systemd 用户服务方案。")
         if not existing.enabled:
             raise SetupError("startup-disabled", "已有 Syncthing 登录启动项处于禁用状态；未更改其状态。")
         if not startup_is_safe(existing, profile):
             raise SetupError("startup-conflict", "已有 Syncthing 自启动项参数不符合本机安全基线，未覆盖。")
-        return {"state": "reused", "kind": existing.kind, "name": existing.name, "registered": True}
+        linger_user = _require_ssh_linger() if existing.kind == "systemd-user" else None
+        return {"state": "reused", "kind": existing.kind, "name": existing.name, "registered": True, "lingerEnabled": True if linger_user else None}
 
     system = platform.system().lower()
     if system == "windows":
@@ -1650,6 +1820,7 @@ def register_startup(executable: Path, profile: Path, existing: StartupEntry | N
 
     systemctl = shutil.which("systemctl")
     if systemctl and run([systemctl, "--user", "show-environment"], timeout=10).returncode == 0:
+        linger_user = _require_ssh_linger()
         directory = Path.home() / ".config/systemd/user"
         path = directory / "codex-lazy-pack-syncthing.service"
         write_new_atomic(path, _systemd_unit(executable, profile), 0o600)
@@ -1657,8 +1828,13 @@ def register_startup(executable: Path, profile: Path, existing: StartupEntry | N
         enable_result = run([systemctl, "--user", "enable", "--now", path.name], timeout=30)
         if reload_result.returncode != 0 or enable_result.returncode != 0:
             raise SetupError("startup-register-failed", "无法启用 systemd 用户登录服务。")
-        return {"state": "registered", "kind": "systemd-user", "name": path.name, "registered": True}
+        return {"state": "registered", "kind": "systemd-user", "name": path.name, "registered": True, "lingerEnabled": True if linger_user else None}
 
+    if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_CLIENT") or not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        raise SetupError(
+            "headless-user-service-unavailable",
+            "当前是无桌面的 Linux/SSH 环境且 systemd 用户服务不可用，不能用桌面自启动满足注销后运行。请在服务器配置可持久化的用户服务后重试；不要以 root 运行 Syncthing。",
+        )
     path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "autostart/codex-lazy-pack-syncthing.desktop"
     write_new_atomic(path, _xdg_desktop(executable, profile), 0o600)
     return {"state": "registered", "kind": "xdg-autostart", "name": path.name, "registered": True}
@@ -1888,11 +2064,57 @@ def verify_runtime_state(state: dict[str, Any]) -> None:
         )
 
 
-def preflight(codex_home: Path, lock_path: Path, supplied_vault: str | None) -> dict[str, Any]:
+def _assert_empty_server_vault(vault: Path) -> None:
+    if not vault.exists():
+        return
+    if not vault.is_dir() or vault.is_symlink():
+        raise SetupError("server-vault-not-directory", "服务器接收路径不是普通目录；未修改。")
+    try:
+        unexpected = [item.name for item in vault.iterdir() if item.name not in {".stignore", ".stfolder"}]
+    except OSError as exc:
+        raise SetupError("server-vault-unreadable", "无法检查服务器接收目录是否为空；未修改。") from exc
+    if unexpected:
+        raise SetupError("server-vault-not-empty", "服务器接收目录含有 Vault 内容或未知文件；为避免覆盖/合并，未修改。")
+
+
+def _create_confirmed_empty_vault(vault: Path, confirmed: bool, role: str, *, expected_missing: bool) -> bool:
+    if vault.exists():
+        if expected_missing:
+            raise SetupError("server-vault-race", "服务器 Vault 路径在预检后已出现；重新检查目录内容后再继续。")
+        if role == "server":
+            _assert_empty_server_vault(vault)
+        return False
+    if role != "server" or not confirmed:
+        raise SetupError("server-vault-confirmation-required", "服务器 Vault 目录不存在；需先展示精确路径并取得用户确认后再创建。")
+    if not vault.parent.is_dir() or vault.parent.is_symlink() or vault == vault.parent:
+        raise SetupError("server-vault-parent-invalid", "服务器 Vault 的父目录不存在、不是普通目录或为符号链接；未创建目录。")
+    try:
+        vault.mkdir()
+    except FileExistsError as exc:
+        raise SetupError("server-vault-race", "服务器 Vault 路径在预检后被创建；重新检查目录内容后再继续。") from exc
+    _assert_empty_server_vault(vault)
+    return True
+
+
+def preflight(codex_home: Path, lock_path: Path, supplied_vault: str | None, *, role: str = "primary") -> dict[str, Any]:
     package_version, lock = load_lock(lock_path)
-    original_device, updated_device, vault, device_path, device_snapshot = read_device_config(
-        codex_home, supplied_vault
+    onboarding_path = codex_home / SYNC_ONBOARDING_RELATIVE
+    onboarding_state = None
+    if onboarding_path.exists() or onboarding_path.is_symlink():
+        _, _, onboarding_state = _read_sync_onboarding_state(codex_home, role)
+    pending_onboarding = bool(onboarding_state and onboarding_state.get("pendingOperation") is not None)
+    paired_onboarding = bool(
+        onboarding_state
+        and onboarding_state.get("status") != "local-prepared"
+        and not pending_onboarding
     )
+    original_device, updated_device, vault, device_path, device_snapshot = read_device_config(
+        codex_home, supplied_vault, role=role, allow_missing_vault=(role == "server")
+    )
+    if role == "server" and not paired_onboarding and not pending_onboarding:
+        _assert_empty_server_vault(vault)
+    if paired_onboarding and not vault.is_dir():
+        raise SetupError("paired-vault-missing", "设备已进入双机引导阶段，但本机 Vault 目录不可访问；不创建空目录或更改现有配置。")
     if is_within_path(device_path, vault) or is_inside_git_repository(device_path):
         raise SetupError("device-config-location-conflict", "设备配置位于 Vault 或 Git 仓库中，未修改。")
     startup = discover_startup_entries()
@@ -1904,6 +2126,8 @@ def preflight(codex_home: Path, lock_path: Path, supplied_vault: str | None) -> 
     if profile.exists() and not (profile / "config.xml").exists():
         raise SetupError("profile-partial", "Syncthing 配置目录已存在但不含 config.xml，未覆盖。")
     matching_startup = startup_for_profile(startup, profile)
+    if linux_headless_or_ssh() and matching_startup and matching_startup.kind == "xdg-autostart":
+        raise SetupError("headless-xdg-conflict", "SSH/无桌面 Linux 发现既有 XDG 自启动项；为避免注销后停止，未复用或改写。")
     if matching_startup and not matching_startup.enabled:
         raise SetupError("startup-disabled", "已有 Syncthing 登录启动项处于禁用状态；停止相关配置写入。")
     matching_processes = [item for item in running if process_targets_profile(item, profile)]
@@ -1939,12 +2163,22 @@ def preflight(codex_home: Path, lock_path: Path, supplied_vault: str | None) -> 
     if profile.is_symlink() or profile_path.is_symlink():
         raise SetupError("profile-symlink", "Syncthing 配置目录或 config.xml 是符号链接，未修改。")
     profile_state: dict[str, Any] | None = None
+    if paired_onboarding and not profile_path.is_file():
+        raise SetupError("paired-profile-missing", "设备已进入双机引导阶段，但本机 Syncthing profile/config.xml 不存在；不生成新身份或重置同步配置。")
     if profile_path.exists():
         root = inspect_xml(profile_path)
-        profile_state = validate_profile(root, vault)
-        if executable is not None:
+        if pending_onboarding:
+            profile_state = {"verification": "deferred-pending-operation"}
+        elif paired_onboarding:
+            profile_state = validate_existing_pair_profile(root, vault, role, onboarding_state or {})
+            if executable is None:
+                raise SetupError("paired-syncthing-executable-missing", "设备已进入双机引导阶段，但无法识别本机 Syncthing 程序；不安装、启动或重置现有同步配置。")
             verify_local_device_identity(executable, profile, profile_state["localDeviceId"])
-        if not profile_is_compliant(root, vault):
+        else:
+            profile_state = validate_profile(root, vault)
+            if executable is not None:
+                verify_local_device_identity(executable, profile, profile_state["localDeviceId"])
+        if not pending_onboarding and not paired_onboarding and not profile_is_compliant(root, vault):
             # A stopped profile is safely updated offline. A live profile is not
             # rewritten while the daemon may be saving the same file.
             active = any(
@@ -1960,6 +2194,11 @@ def preflight(codex_home: Path, lock_path: Path, supplied_vault: str | None) -> 
         "packageVersion": package_version,
         "platform": platform_key(),
         "codexHome": str(codex_home),
+        "syncOnboarding": {
+            "status": onboarding_state.get("status") if onboarding_state else None,
+            "pairedProfile": paired_onboarding,
+            "pendingOperation": ({"action": onboarding_state["pendingOperation"].get("action"), "phase": onboarding_state["pendingOperation"].get("phase")} if onboarding_state and isinstance(onboarding_state.get("pendingOperation"), dict) else ("invalid" if onboarding_state and onboarding_state.get("pendingOperation") is not None else None)),
+        },
         "deviceConfig": {
             "path": str(device_path),
             "exists": device_path.exists(),
@@ -1996,6 +2235,327 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+_ONBOARDING_STAGE_ORDER = {
+    "primary": {"local-prepared": 0, "paired-paused": 1, "seeding": 2, "primary-promoted": 3, "active": 4},
+    "server": {"local-prepared": 0, "paired-paused": 1, "receiver-ready": 2, "seed-verified": 3, "server-promoted": 4, "active": 5},
+}
+
+_ONBOARDING_OPERATION_START = {
+    ("server", "arm-receiver"): "paired-paused",
+    ("primary", "start-source"): "paired-paused",
+    ("server", "promote-server"): "seed-verified",
+    ("primary", "promote-primary"): "seeding",
+}
+
+_ONBOARDING_OPERATION_COMPLETION = {
+    ("server", "arm-receiver"): "receiver-ready",
+    ("primary", "start-source"): "seeding",
+    ("server", "promote-server"): "server-promoted",
+    ("primary", "promote-primary"): "primary-promoted",
+}
+
+
+def write_sync_onboarding_state(
+    codex_home: Path,
+    role: str,
+    status: str,
+    *,
+    peer_syncthing_device_id: str | None = None,
+    syncthing_device_id: str | None = None,
+) -> dict[str, Any]:
+    if role not in _ONBOARDING_STAGE_ORDER or status not in _ONBOARDING_STAGE_ORDER[role]:
+        raise SetupError("onboarding-state-invalid", "第二大脑同步引导状态值无效。")
+    path = codex_home / SYNC_ONBOARDING_RELATIVE
+    snapshot = snapshot_file(path, "第二大脑同步引导状态")
+    current: dict[str, Any] = {}
+    if snapshot is not None:
+        try:
+            loaded = json.loads(snapshot.decode("utf-8"))
+        except (UnicodeError, ValueError) as exc:
+            raise SetupError("onboarding-state-invalid", "同步引导状态文件损坏；未覆盖。") from exc
+        if not isinstance(loaded, dict) or loaded.get("schemaVersion") != 1:
+            raise SetupError("onboarding-state-invalid", "同步引导状态文件格式不受支持；未覆盖。")
+        if loaded.get("role") not in {None, role}:
+            raise SetupError("onboarding-role-conflict", "同步引导状态记录了不同设备角色；未覆盖。")
+        if loaded.get("status") is not None and loaded.get("status") not in _ONBOARDING_STAGE_ORDER[role]:
+            raise SetupError("onboarding-state-invalid", "同步引导状态包含未知阶段；未覆盖。")
+        existing_peer = loaded.get("peerSyncthingDeviceId")
+        if existing_peer is not None and not isinstance(existing_peer, str):
+            raise SetupError("onboarding-state-invalid", "同步引导状态中的配对设备 ID 格式无效；未覆盖。")
+        existing_device = loaded.get("syncthingDeviceId")
+        if existing_device is not None and not isinstance(existing_device, str):
+            raise SetupError("onboarding-state-invalid", "同步引导状态中的本机 Syncthing Device ID 格式无效；未覆盖。")
+        if peer_syncthing_device_id and existing_peer and _normalized_device_id(existing_peer) != _normalized_device_id(peer_syncthing_device_id):
+            raise SetupError("onboarding-peer-conflict", "同步引导状态已绑定另一台设备；未覆盖。")
+        if syncthing_device_id and existing_device and _normalized_device_id(existing_device) != _normalized_device_id(syncthing_device_id):
+            raise SetupError("onboarding-device-conflict", "同步引导状态已绑定另一台本机 Syncthing 身份；未覆盖。")
+        if loaded.get("pendingOperation") is not None:
+            raise SetupError("onboarding-operation-pending", "同步引导存在未完成的操作；必须先按恢复流程处理，未推进阶段。")
+        current = loaded
+    current_status = current.get("status")
+    order = _ONBOARDING_STAGE_ORDER[role]
+    if current_status in order and order[current_status] > order[status]:
+        return {"path": str(path), "status": current_status, "preserved": True, "backupPath": None}
+    if (current_status == status and current.get("folderId") == FOLDER_ID
+            and (not peer_syncthing_device_id or (isinstance(current.get("peerSyncthingDeviceId"), str)
+                 and _normalized_device_id(current["peerSyncthingDeviceId"]) == _normalized_device_id(peer_syncthing_device_id)))
+            and (not syncthing_device_id or (isinstance(current.get("syncthingDeviceId"), str)
+                 and _normalized_device_id(current["syncthingDeviceId"]) == _normalized_device_id(syncthing_device_id)))):
+        return {"path": str(path), "status": current_status, "preserved": True, "backupPath": None}
+    updated = dict(current)
+    updated.update({
+        "schemaVersion": 1,
+        "role": role,
+        "status": status,
+        "folderId": FOLDER_ID,
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+    })
+    if peer_syncthing_device_id:
+        updated["peerSyncthingDeviceId"] = peer_syncthing_device_id
+    if syncthing_device_id:
+        updated["syncthingDeviceId"] = syncthing_device_id
+    backup = backup_targets(codex_home, [(path, "second-brain/sync-onboarding.json")]) if snapshot is not None else None
+    write_atomic(path, (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode("utf-8"), mode=0o600, expected_current=snapshot)
+    return {"path": str(path), "status": status, "preserved": False, "backupPath": backup}
+
+
+def _read_sync_onboarding_state(codex_home: Path, role: str) -> tuple[Path, bytes | None, dict[str, Any]]:
+    if role not in _ONBOARDING_STAGE_ORDER:
+        raise SetupError("onboarding-state-invalid", "第二大脑同步引导设备角色无效。")
+    path = codex_home / SYNC_ONBOARDING_RELATIVE
+    snapshot = snapshot_file(path, "第二大脑同步引导状态")
+    if snapshot is None:
+        raise SetupError("onboarding-state-missing", "缺少第二大脑同步引导状态；先完成本机 setup。")
+    try:
+        loaded = json.loads(snapshot.decode("utf-8"))
+    except (UnicodeError, ValueError) as exc:
+        raise SetupError("onboarding-state-invalid", "同步引导状态文件损坏；未覆盖。") from exc
+    if not isinstance(loaded, dict) or loaded.get("schemaVersion") != 1:
+        raise SetupError("onboarding-state-invalid", "同步引导状态文件格式不受支持；未覆盖。")
+    if loaded.get("role") != role or loaded.get("status") not in _ONBOARDING_STAGE_ORDER[role]:
+        raise SetupError("onboarding-state-invalid", "同步引导状态中的设备角色或阶段不匹配。")
+    if loaded.get("folderId") != FOLDER_ID:
+        raise SetupError("onboarding-state-invalid", "同步引导状态中的 folder ID 不匹配。")
+    return path, snapshot, loaded
+
+
+def _write_sync_onboarding_snapshot(
+    codex_home: Path, path: Path, snapshot: bytes, updated: dict[str, Any]
+) -> dict[str, Any]:
+    backup = backup_targets(codex_home, [(path, "second-brain/sync-onboarding.json")])
+    write_atomic(
+        path,
+        (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+        mode=0o600,
+        expected_current=snapshot,
+    )
+    return {"path": str(path), "status": updated.get("status"), "backupPath": backup}
+
+
+def begin_sync_onboarding_operation(
+    codex_home: Path,
+    role: str,
+    *,
+    action: str,
+    syncthing_device_id: str,
+    peer_syncthing_device_id: str,
+    vault_path: str,
+    expected_folder_type: str,
+    backup_path: str,
+    confirmations: dict[str, bool],
+    source_folder_type: str | None = None,
+    baseline_manifest_sha256: str | None = None,
+    peer_manifest_sha256: str | None = None,
+) -> dict[str, Any]:
+    if (role, action) not in _ONBOARDING_OPERATION_START:
+        raise SetupError("onboarding-operation-invalid", "不支持的同步引导操作。")
+    path, snapshot, current = _read_sync_onboarding_state(codex_home, role)
+    status = str(current["status"])
+    pending = current.get("pendingOperation")
+    committed_recovery = isinstance(pending, dict) and pending.get("completionCommitUncertain") is True
+    if pending is not None:
+        if (not isinstance(pending, dict) or pending.get("action") != action
+                or pending.get("phase") != "held" or not isinstance(pending.get("operationId"), str)):
+            raise SetupError("onboarding-operation-pending", "存在其他或尚未恢复的同步操作；未解除暂停。")
+        expected_start_status = _ONBOARDING_OPERATION_START[(role, action)]
+        expected_completion = _ONBOARDING_OPERATION_COMPLETION[(role, action)]
+        expected_current_status = expected_completion if committed_recovery else expected_start_status
+        if (status != expected_current_status or pending.get("previousStatus") != expected_start_status
+                or (committed_recovery and pending.get("committedStatus") != expected_completion)):
+            raise SetupError("onboarding-operation-state-conflict", "待恢复操作原阶段与当前引导阶段不符；保持暂停并人工检查。")
+        for key, expected in (("syncthingDeviceId", syncthing_device_id), ("peerSyncthingDeviceId", peer_syncthing_device_id), ("vaultPath", vault_path), ("folderId", FOLDER_ID)):
+            actual = pending.get(key)
+            if key.endswith("DeviceId"):
+                matches = isinstance(actual, str) and _normalized_device_id(actual) == _normalized_device_id(expected)
+            else:
+                matches = actual == expected
+            if not matches:
+                raise SetupError("onboarding-operation-identity-conflict", "待恢复操作的设备身份或路径与当前环境不一致；未解除暂停。")
+        if pending.get("previousStatus") != expected_start_status:
+            raise SetupError("onboarding-operation-state-conflict", "待恢复操作记录的阶段与当前阶段不一致；未解除暂停。")
+        if not isinstance(pending.get("containment"), dict) or pending["containment"].get("containmentVerified") is not True:
+            raise SetupError("onboarding-operation-containment-unverified", "待恢复操作没有已核验的暂停记录；未解除暂停。")
+        if not isinstance(confirmations, dict) or not all(value is True for value in confirmations.values()):
+            raise SetupError("onboarding-operation-confirmation-required", "重试同步操作需要重新确认所有必要条件。")
+    elif status != _ONBOARDING_OPERATION_START[(role, action)]:
+        raise SetupError("onboarding-operation-order-conflict", "当前引导阶段不允许开始该同步操作。")
+
+    existing_device = current.get("syncthingDeviceId")
+    existing_peer = current.get("peerSyncthingDeviceId")
+    if existing_device and _normalized_device_id(str(existing_device)) != _normalized_device_id(syncthing_device_id):
+        raise SetupError("onboarding-device-conflict", "同步引导状态中的本机身份与当前 Syncthing profile 不符。")
+    if existing_peer and _normalized_device_id(str(existing_peer)) != _normalized_device_id(peer_syncthing_device_id):
+        raise SetupError("onboarding-peer-conflict", "同步引导状态中的配对身份与当前对端不符。")
+    if action == "arm-receiver" and (role != "server" or expected_folder_type != "receiveonly"):
+        raise SetupError("onboarding-operation-invalid", "服务器仅可执行 receive-only 接收准备。")
+    if action == "start-source" and (role != "primary" or expected_folder_type != "sendonly"):
+        raise SetupError("onboarding-operation-invalid", "个人电脑仅可执行 send-only 首次播种。")
+    if action in {"promote-server", "promote-primary"} and (
+        expected_folder_type != "sendreceive"
+        or source_folder_type != ("receiveonly" if role == "server" else "sendonly")
+        or not isinstance(baseline_manifest_sha256, str)
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", baseline_manifest_sha256)
+        or not isinstance(peer_manifest_sha256, str)
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", peer_manifest_sha256)
+        or baseline_manifest_sha256.lower() != peer_manifest_sha256.lower()
+    ):
+        raise SetupError("onboarding-operation-invalid", "晋级操作缺少有效的源/目标模式或一致的内容指纹基线。")
+    required_confirmations = {
+        "arm-receiver": {"receiverPreparationApproved"},
+        "start-source": {"receiverReady", "writersPaused"},
+        "promote-server": {"promotionApproved", "writersPaused", "peerStageVerified"},
+        "promote-primary": {"promotionApproved", "writersPaused", "peerStageVerified"},
+    }[action]
+    if not isinstance(confirmations, dict) or any(confirmations.get(key) is not True for key in required_confirmations):
+        raise SetupError("onboarding-operation-confirmation-required", "待执行操作缺少必需的本阶段确认；未解除暂停。")
+    operation_id = str(pending["operationId"]) if isinstance(pending, dict) else str(uuid.uuid4())
+    previous_status = _ONBOARDING_OPERATION_START[(role, action)]
+    attempt_time = datetime.now(timezone.utc).isoformat()
+    pending_operation = {
+        "operationId": operation_id,
+        "action": action,
+        "phase": "mutating",
+        "role": role,
+        "syncthingDeviceId": syncthing_device_id,
+        "peerSyncthingDeviceId": peer_syncthing_device_id,
+        "vaultPath": vault_path,
+        "folderId": FOLDER_ID,
+        "expectedFolderType": expected_folder_type,
+        "sourceFolderType": source_folder_type,
+        "targetFolderType": expected_folder_type,
+        "baselineManifestSha256": baseline_manifest_sha256.lower() if baseline_manifest_sha256 else None,
+        "peerManifestSha256": peer_manifest_sha256.lower() if peer_manifest_sha256 else None,
+        "previousStatus": previous_status,
+        "backupPath": backup_path,
+        "requiredConfirmations": dict(confirmations),
+        "startedAt": pending.get("startedAt", attempt_time) if isinstance(pending, dict) else attempt_time,
+        "lastAttemptAt": attempt_time,
+        "containment": None,
+    }
+    if committed_recovery:
+        pending_operation.update({
+            "completionCommitUncertain": True,
+            "committedStatus": _ONBOARDING_OPERATION_COMPLETION[(role, action)],
+        })
+    updated = dict(current)
+    updated.update({
+        "schemaVersion": 1,
+        "role": role,
+        "folderId": FOLDER_ID,
+        "syncthingDeviceId": syncthing_device_id,
+        "peerSyncthingDeviceId": peer_syncthing_device_id,
+        "pendingOperation": pending_operation,
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+    })
+    result = _write_sync_onboarding_snapshot(codex_home, path, snapshot, updated)
+    result.update({"operationId": operation_id, "pendingOperation": pending_operation})
+    return result
+
+
+def hold_sync_onboarding_operation(
+    codex_home: Path,
+    role: str,
+    operation_id: str,
+    containment: dict[str, Any],
+    *,
+    pending_operation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    path, snapshot, current = _read_sync_onboarding_state(codex_home, role)
+    pending = current.get("pendingOperation")
+    if isinstance(pending, dict) and pending.get("operationId") == operation_id:
+        updated_pending = dict(pending)
+    elif pending is None and isinstance(pending_operation, dict):
+        action = pending_operation.get("action")
+        expected_completion = _ONBOARDING_OPERATION_COMPLETION.get((role, action))
+        expected_start = _ONBOARDING_OPERATION_START.get((role, action))
+        current_device = current.get("syncthingDeviceId")
+        operation_device = pending_operation.get("syncthingDeviceId")
+        current_peer = current.get("peerSyncthingDeviceId")
+        operation_peer = pending_operation.get("peerSyncthingDeviceId")
+        if (pending_operation.get("operationId") != operation_id
+                or pending_operation.get("role") != role
+                or pending_operation.get("phase") != "mutating"
+                or expected_completion is None or expected_start is None
+                or pending_operation.get("previousStatus") != expected_start
+                or pending_operation.get("folderId") != FOLDER_ID
+                or current.get("status") != expected_completion
+                or current.get("role") != role or current.get("folderId") != FOLDER_ID
+                or not isinstance(current_device, str) or not isinstance(operation_device, str)
+                or _normalized_device_id(current_device) != _normalized_device_id(operation_device)
+                or not isinstance(current_peer, str) or not isinstance(operation_peer, str)
+                or _normalized_device_id(current_peer) != _normalized_device_id(operation_peer)):
+            raise SetupError("onboarding-operation-drift", "完成阶段虽已可见但缺少匹配的操作记录；不回退阶段也不覆盖状态。")
+        updated_pending = dict(pending_operation)
+        updated_pending.update({
+            "completionCommitUncertain": True,
+            "committedStatus": expected_completion,
+        })
+    else:
+        raise SetupError("onboarding-operation-drift", "待恢复操作标记在处理期间发生变化；未覆盖。")
+    updated_pending.update({
+        "phase": "held",
+        "containment": containment,
+        "heldAt": datetime.now(timezone.utc).isoformat(),
+    })
+    updated = dict(current)
+    updated["pendingOperation"] = updated_pending
+    updated["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    return _write_sync_onboarding_snapshot(codex_home, path, snapshot, updated)
+
+
+def complete_sync_onboarding_operation(
+    codex_home: Path,
+    role: str,
+    operation_id: str,
+    status: str,
+) -> dict[str, Any]:
+    if status not in _ONBOARDING_STAGE_ORDER.get(role, {}):
+        raise SetupError("onboarding-state-invalid", "第二大脑同步引导完成状态无效。")
+    path, snapshot, current = _read_sync_onboarding_state(codex_home, role)
+    pending = current.get("pendingOperation")
+    if not isinstance(pending, dict) or pending.get("operationId") != operation_id or pending.get("phase") != "mutating":
+        raise SetupError("onboarding-operation-drift", "待恢复操作标记与当前操作不一致；未清除。")
+    expected_completion = _ONBOARDING_OPERATION_COMPLETION
+    if expected_completion.get((role, pending.get("action"))) != status:
+        raise SetupError("onboarding-operation-state-conflict", "完成阶段与已持久化操作不匹配；未清除待执行标记。")
+    expected_start = _ONBOARDING_OPERATION_START[(role, str(pending.get("action")))]
+    commit_recovery = pending.get("completionCommitUncertain") is True
+    if (pending.get("previousStatus") != expected_start
+            or (commit_recovery and (pending.get("committedStatus") != status or current.get("status") != status))
+            or (not commit_recovery and current.get("status") != expected_start)):
+        raise SetupError("onboarding-operation-state-conflict", "操作原阶段/待恢复完成阶段与当前状态不一致；未清除待执行标记。")
+    stage_order = _ONBOARDING_STAGE_ORDER[role]
+    if stage_order.get(status, -1) < stage_order.get(str(current.get("status")), -1):
+        raise SetupError("onboarding-state-regression", "同步引导阶段不能回退；未清除待执行标记。")
+    updated = dict(current)
+    updated["status"] = status
+    updated.pop("pendingOperation", None)
+    updated["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    result = _write_sync_onboarding_snapshot(codex_home, path, snapshot, updated)
+    result["status"] = status
+    return result
+
+
 def create_fresh_profile(executable: Path, profile: Path, vault: Path) -> dict[str, Any]:
     if profile.exists():
         raise SetupError("profile-exists", "Syncthing 配置目录已存在；不会覆盖或初始化。")
@@ -2015,12 +2575,60 @@ def create_fresh_profile(executable: Path, profile: Path, vault: Path) -> dict[s
     return state
 
 
-def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -> dict[str, Any]:
+def apply_setup(
+    codex_home: Path,
+    lock_path: Path,
+    supplied_vault: str | None,
+    *,
+    role: str = "primary",
+    create_empty_vault_confirmed: bool = False,
+) -> dict[str, Any]:
     _PROGRESS.clear()
     _PROGRESS.update({"phase": "preflight", "completed": [], "backupPath": None})
-    plan = preflight(codex_home, lock_path, supplied_vault)
+    plan = preflight(codex_home, lock_path, supplied_vault, role=role)
     _PROGRESS["completed"].append("本机路径、配置与冲突预检通过")
+    if plan.get("syncOnboarding", {}).get("pendingOperation") is not None:
+        raise SetupError("onboarding-operation-pending", "存在未完成的 Syncthing 操作；本机 setup 不会绕过 HOLD 或重新配置 profile。")
+    if plan.get("syncOnboarding", {}).get("pairedProfile") is True:
+        profile_state = plan["syncthing"].get("profileState") or {}
+        stage = str(plan.get("syncOnboarding", {}).get("status") or "unknown")
+        sync_paused = profile_state.get("folderPaused") is True or profile_state.get("peerPaused") is True
+        if stage == "active":
+            result_status = "active-sync-paused-no-changes" if sync_paused else "already-active-no-changes"
+        else:
+            result_status = "existing-pair-paused-no-changes" if sync_paused else "existing-pair-no-changes"
+        return {
+            "status": result_status,
+            "packageVersion": plan["packageVersion"],
+            "role": role,
+            "onboardingStatus": stage,
+            "vaultPath": plan["vault"]["path"],
+            "syncthingVersion": plan["syncthing"].get("version"),
+            "syncthingExecutable": plan["syncthing"].get("executable"),
+            "syncthingProfile": plan["syncthing"]["profilePath"],
+            "syncthingDeviceId": profile_state.get("localDeviceId"),
+            "peerSyncthingDeviceId": profile_state.get("peerDeviceId"),
+            "folderId": profile_state.get("folderId"),
+            "folderType": profile_state.get("folderType"),
+            "folderPaused": profile_state.get("folderPaused"),
+            "peerPaused": profile_state.get("peerPaused"),
+            "remoteDeviceCount": profile_state.get("remoteDeviceCount"),
+            "network": profile_state.get("network"),
+            "listenAddress": profile_state.get("listenAddress"),
+            "guiAddress": profile_state.get("guiAddress"),
+            "networkPolicyVerified": True,
+            "ignoreRulesMissing": plan["ignore"].get("rulesToAdd", []),
+            "startup": plan["startup"],
+            "backgroundProcessObserved": plan["syncthing"].get("running") is True,
+            "configurationModified": False,
+            "onboardingStageAdvanced": False,
+            "crossDeviceSyncVerified": False,
+            "note": f"仅只读核验并保留已记录阶段 {stage} 的双机 profile；未应用首次安装默认值、改变暂停状态、启动/停止服务、改写 .stignore 或推进阶段。实时连接和跨设备内容状态未验证。",
+        }
     vault = Path(plan["vault"]["path"])
+    vault_expected_missing = not bool(plan["vault"]["exists"])
+    if vault_expected_missing and (role != "server" or not create_empty_vault_confirmed):
+        raise SetupError("server-vault-confirmation-required", "服务器 Vault 目录不存在；需先展示精确路径并取得用户确认后再创建。")
     device_path = Path(plan["deviceConfig"]["path"])
     profile = Path(plan["syncthing"]["profilePath"])
     assert_safe_syncthing_environment(discover_startup_entries())
@@ -2061,7 +2669,11 @@ def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -
     device_data["vaultPath"] = str(vault)
     device_data.setdefault("syncMode", "syncthing")
     device_data.setdefault("backupMode", "github-manual")
-    device_data.setdefault("gitBackupDevice", False)
+    expected_backup_role = role == "primary"
+    existing_backup_role = original_device.get("gitBackupDevice")
+    if type(existing_backup_role) is bool and existing_backup_role != expected_backup_role:
+        raise SetupError("backup-role-conflict", "现有设备配置的 GitHub 备份角色与本次确认的 primary/server 角色冲突；未修改。")
+    device_data["gitBackupDevice"] = expected_backup_role
     device_data.setdefault("writePolicy", "tiered")
     device_data.setdefault("weeklyAutomationId", None)
 
@@ -2122,6 +2734,15 @@ def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -
     _PROGRESS["backupPath"] = backup_path
     if backup_path:
         _PROGRESS["completed"].append("已备份所有将要修改的既有文件")
+
+    vault_created = _create_confirmed_empty_vault(
+        vault,
+        create_empty_vault_confirmed,
+        role,
+        expected_missing=vault_expected_missing,
+    )
+    if vault_created:
+        _PROGRESS["completed"].append("已在确认路径创建空的服务器 Vault 接收目录")
 
     expected_device = device_snapshot
     device_bytes = (json.dumps(device_data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -2195,6 +2816,9 @@ def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -
     _PROGRESS["phase"] = "verify-runtime"
     runtime_state = runtime_api_state(profile, vault)
     verify_runtime_state(runtime_state)
+    onboarding_state = write_sync_onboarding_state(
+        codex_home, role, "local-prepared", syncthing_device_id=final_state["localDeviceId"]
+    )
     _PROGRESS["phase"] = "complete"
     _PROGRESS["completed"].append("本机配置与运行状态验证完成；跨设备同步尚未验证")
 
@@ -2204,8 +2828,12 @@ def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -
         "syncthingVersion": version_text,
         "syncthingExecutable": str(exe),
         "syncthingProfile": str(profile),
+        "syncthingDeviceId": final_state["localDeviceId"],
         "vaultPath": str(vault),
         "deviceConfigPath": str(device_path),
+        "role": role,
+        "gitBackupDevice": device_data["gitBackupDevice"],
+        "syncOnboardingState": onboarding_state,
         "folderId": final_state["folderId"],
         "folderPaused": final_state["folderPaused"],
         "remoteDeviceCount": final_state["remoteDeviceCount"],
@@ -2227,23 +2855,40 @@ def apply_setup(codex_home: Path, lock_path: Path, supplied_vault: str | None) -
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Codex-invoked local Syncthing bootstrap")
-    parser.add_argument("action", choices=("preflight", "apply"))
+    parser.add_argument("action", choices=("preflight", "begin", "apply"))
     parser.add_argument("--codex-home")
     parser.add_argument("--vault-path")
+    parser.add_argument("--role", choices=("primary", "server"), default="primary")
+    parser.add_argument("--create-empty-vault-confirmed", action="store_true")
     args = parser.parse_args()
     codex_home = codex_home_from(args.codex_home)
     lock_path = LOCK_FILE
     try:
         if args.action == "preflight":
-            emit(preflight(codex_home, lock_path, args.vault_path))
-        emit(apply_setup(codex_home, lock_path, args.vault_path))
+            emit(preflight(codex_home, lock_path, args.vault_path, role=args.role))
+        if args.action == "begin":
+            plan = preflight(codex_home, lock_path, args.vault_path, role=args.role)
+            state = write_sync_onboarding_state(codex_home, args.role, "local-prepared")
+            paused = state["status"] != "active"
+            note = "引导状态已先行写入；全局第二大脑自动维护保持暂停，直到双机验证完成。" if paused else "本机已有 active 双机状态；按单调状态规则保留，不自动降级或暂停既有维护。"
+            emit({"status": "onboarding-begun", "role": args.role, "vaultPath": plan["vault"]["path"], "onboardingState": state, "maintenancePaused": paused, "note": note})
+        emit(apply_setup(
+            codex_home,
+            lock_path,
+            args.vault_path,
+            role=args.role,
+            create_empty_vault_confirmed=args.create_empty_vault_confirmed,
+        ))
     except SetupError as exc:
         emit(
             {
                 "status": "blocked",
                 "code": exc.code,
                 "message": str(exc),
-                "syncthingChangesStopped": True,
+                "installerWritesStopped": True,
+                "containmentStatus": "not-attempted",
+                "containmentVerified": False,
+                "syncthingChangesStopped": None,
                 "otherSelectedPackInstallsMayContinue": True,
                 "progress": {
                     "phase": _PROGRESS.get("phase"),
@@ -2259,7 +2904,10 @@ def main() -> None:
                 "status": "blocked",
                 "code": "filesystem-operation-failed",
                 "message": f"本机文件操作失败（{exc.strerror or type(exc).__name__}）；保留备份和已完成步骤。",
-                "syncthingChangesStopped": True,
+                "installerWritesStopped": True,
+                "containmentStatus": "not-attempted",
+                "containmentVerified": False,
+                "syncthingChangesStopped": None,
                 "otherSelectedPackInstallsMayContinue": True,
                 "progress": {
                     "phase": _PROGRESS.get("phase"),

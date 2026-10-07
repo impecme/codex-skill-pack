@@ -29,7 +29,7 @@
 
 用户的确认只覆盖展示过的精确路径和差异；目标文件在应用前发生变化、出现新冲突或发现新的影响范围时，确认失效，必须停止并重新生成方案。
 
-例外仅适用于用户在当前安装对话中明确选择懒人包 05 或“全部”：该选择预先授权 [syncthing-bootstrap.md](syncthing-bootstrap.md) 列出的本机、暂停式增量配置。此授权不适用于日常项目对话或之后单独调用 setup，也不授权添加远端设备、解除暂停、开放监听/发现/中继/NAT、防火墙、外部登录、Vault 笔记迁移或 Git 操作。检测到配置冲突时停止 Syncthing 相关写入并保留已完成的其他懒人包安装。
+例外仅适用于用户在当前安装对话中明确选择懒人包 05 或“全部”：该选择授权两端各自在本机执行经检查的增量配置。它不自动授权其他设备写入；需要对端时必须由用户在两边 Codex 对话间传递并核对配对卡。公共发现/官方 relay、解除暂停开始首次传输、逐阶段切换双向模式、Vault 初始化以及 PC Git/GitHub 变更，都必须先说明精确影响并取得该阶段确认；任何同步路径冲突或状态不明时停止阶段转换。此授权不适用于日常项目对话或之后单独调用 setup，不授权修改防火墙/路由器、外部登录、Schema 1 迁移或自动 Git 操作。检测到配置冲突时停止相关写入并保留已完成的其他懒人包安装。
 
 ## 写入前后检查
 
@@ -57,8 +57,13 @@
 同步和备份职责固定分离：
 
 - Syncthing 是设备间唯一实时同步通道。每台设备操作同一个主 Vault 的本地副本，不创建设备专属 Vault。
+- 首次连接 PC 与 SSH Linux 服务器时，个人电脑是唯一初始权威副本：PC 文件夹先设为 `sendonly`，服务器的经确认空目录先设为 `receiveonly`。初次播种前，两端 Obsidian、Codex worker、脚本及其他 Vault 写入者都必须停写；配对完成本身不代表可以开始传输。
+- 服务器端只有在 Syncthing 报告 `idle`、`needTotalItems/needBytes/needDeletes` 与 `pullErrors` 均为零、`receiveOnlyTotalItems` 为零，且停写期间两端文件内容 manifest 一致后，才可经确认先升级服务器为 `sendreceive`。复核仍一致后，才升级 PC；异常时暂停目标文件夹进入 HOLD，不执行 Override、Revert 或自动合并。
+- 首次配对仅登记经用户从另一设备配对卡核验的 Syncthing Device ID 和固定 Vault folder ID；卡片不得包含本机路径、密钥或第二大脑 `deviceId`。未知远端设备、身份不符、服务器目录非空、路径冲突或同步状态不明都停止相关写入。
+- 公共发现和官方 relay 会处理设备连接所需的 Device ID/IP 等元数据；Syncthing 数据连接由设备间 TLS 保护。配置仅保留 TCP loopback 与官方 dynamic relay 地址，不监听全部网卡；关闭 LAN 发现/地址公告和 Syncthing 自身 NAT/UPnP 映射，不自动更改路由器或防火墙。
 - 写入共享文件前必须有可观察的 up-to-date 迹象，并确认没有其他设备、Obsidian 窗口、Codex worker 或脚本正在写同一文件；目录存在或进程存在本身不能证明同步完成。
 - 发现任意 Syncthing 冲突文件、未完成同步、双方版本不同或无法确认其他写入者时，保留双方内容并阻断共享写入。可以继续不依赖历史的工程工作，也可以只写新的设备独立 Inbox。
+- `sync-onboarding.json` 只要不是 `status=active`，或存在 `pendingOperation`（即使 status 为 active），就暂停所有 Vault 自动读取/写入。待执行标记必须先落盘，再解除同步暂停；任何阶段失败都按配对 Skill 的恢复流程尝试先暂停 folder、再暂停已确认对端，并回读两者状态。只有两者均核验为暂停，才可报告同步变更已停止；API/设备不可达时明确说明状态未知，保留 HOLD，不要把正常工程工作一并阻塞。
 - 不自动修改 Daily、`status.md`、collection index、正式 Knowledge 或 Decision 来“消除”冲突。冲突选择、合并、移动和删除必须由用户确认。
 - `.git`、设备配置、Obsidian 工作区 UI 状态和同步临时文件不属于普通 Vault 内容，不应通过 Syncthing 传播。
 
@@ -66,6 +71,7 @@
 
 - GitHub 私有仓库只作为指定设备的人工云端备份和历史审查，不是第二条实时同步通道。
 - 只有配置中 `gitBackupDevice: true` 的唯一指定设备可以维护 Vault 的 `.git` 并执行用户要求的人工备份；其他设备必须保持 `false`，不得自动初始化 Git。
+- 本懒人包的固定角色为：个人电脑 `gitBackupDevice: true`，SSH Linux 服务器 `false`。Syncthing 忽略 `.git`，服务器不得创建或共享该 Vault 的 Git 元数据。
 - 不配置自动 pull、commit 或 push；周期任务也不得执行 Git。用户明确要求时，先展示 diff，再分别确认 commit 和 push。
 - 不把 GitHub 凭证、远端 token、私钥或秘密写入 Vault、Skill、配置或 commit 历史。
 

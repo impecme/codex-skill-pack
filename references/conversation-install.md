@@ -95,9 +95,8 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 `<SkillRoot>/codex-second-brain`，并将
 `bundled-skills/codex-second-brain/assets/global-agents-section.md` 合并到
 `<CodexHome>/AGENTS.md`。随后依照
-[`syncthing-bootstrap.md`](../bundled-skills/codex-second-brain/references/syncthing-bootstrap.md) 只读预检并配置本机设备、
-已有 Vault 根目录的 `.stignore` 和用户登录后台启动。选择 05 即授权该参考列出的本机增量操作，不授权远端设备或内容传输。
-Vault 路径缺失时一次性询问；冲突时停止 Syncthing 写入，但不撤销其他懒人包的已完成安装。
+[`syncthing-bootstrap.md`](../bundled-skills/codex-second-brain/references/syncthing-bootstrap.md) 和
+[`github-backup-bootstrap.md`](../bundled-skills/codex-second-brain/references/github-backup-bootstrap.md) 完成双机引导：每台设备都要在本机 Codex 环境执行一次 05，分别准备本机 Syncthing 与 Vault 路径，再由用户在两边对话间传递配对卡、接收就绪状态和 manifest 指纹。选择 05 授权本机准备；启用公共发现/relay、登记对端、首次内容传输、提升为双向模式、PC 端 Git 初始化或 GitHub 远端变更，必须按相应参考逐项说明并取得确认。路径缺失时集中询问；冲突时停止相关写入与阶段转换，但不撤销其他懒人包的已完成安装。
 
 所有 Skill 共用预检确定的 `<SkillRoot>`，不要由各子入口或安装器重新猜测路径。
 
@@ -194,11 +193,10 @@ Matt Pocock 技能建议区块标记：
 
 对于 `02` 至 `04`，还要报告目标 Skill 目录、源目录、固定 commit、是否发生备份、
 是否需要重启 Codex，以及安装阶段明确未执行的 GitHub 登录、push、MCP 配置和 Vault 写入。
-对于 `05`，分别报告 Skill 文件、全局规则、本机设备配置、Syncthing 程序/profile、Vault 文件夹、忽略规则、用户级登录项和后台进程状态；
-报告懒人包版本、可解析时的本仓库 commit、内置源目录、目标 Skill 目录和备份位置。明确没有添加远端设备、开启网络同步、
-传输 Vault 内容、配置 GitHub 备份或创建定时任务；同时报告启动环境检查和本机 API 实际状态。只有 API 验证到目标文件夹暂停、无远端设备且无连接时，才能报告本机配置完成；否则报告失败阶段和待处理项。无远端时注明真实跨设备同步尚未验证。说明全局规则只有在设备配置存在且 Vault 可访问后才会自动融入项目工作。
+对于 `05`，分别报告 PC 与服务器的 Skill 文件、全局规则、本机设备配置、Syncthing 程序/profile、Vault 文件夹、忽略规则、用户登录启动项和后台进程状态；按真实进度区分本机准备、配对暂停、接收就绪、首次播种、接收核验、服务器晋级、PC 晋级和 `active`。报告配对/连接状态、传输状态、idle/needs/errors、manifest 是否一致、GitHub 私有远端状态、备份位置、待人工介入项，以及是否存在 `pendingOperation`。失败时分开报告原操作结果、folder/对端/本机身份的实际暂停核验和未知原因；只有身份及两项目标都核验后才报告同步变更已停止。不要笼统声称“未添加远端”或“未传输”，而应报告实际观测到的状态和未完成阶段。若未完成双边验证，注明真实跨设备同步尚未验证，并确认 `<CodexHome>/second-brain/sync-onboarding.json` 的 status 非 `active` 或存在 `pendingOperation` 时全局自动维护保持暂停。仅当对应阶段的本机 API 与跨设备证据均满足参考要求时，才标记该阶段完成。
 
-安装阶段不运行已复制 Skill 的正文指令；但 `05` 子入口可调用其内置本机同步辅助程序，范围限于
-[`syncthing-bootstrap.md`](../bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)。`02` 至 `04` 之后由用户主动触发；`05` 完成一次性设备配置后由全局规则
+安装阶段不运行已复制 Skill 的正文指令；但 `05` 子入口可调用其内置本机同步/配对辅助程序，范围限于
+[`syncthing-bootstrap.md`](../bundled-skills/codex-second-brain/references/syncthing-bootstrap.md) 与
+[`github-backup-bootstrap.md`](../bundled-skills/codex-second-brain/references/github-backup-bootstrap.md)。`02` 至 `04` 之后由用户主动触发；`05` 完成并核验引导后由全局规则
 在普通项目工作中自动调用。所有已安装 Skill 仍需遵守各自确认边界；尤其不能把 token、密码或其他凭证写入仓库、
 `AGENTS.md` 或笔记。

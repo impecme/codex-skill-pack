@@ -6,10 +6,10 @@
 
 这是我的个人 Codex 懒人包。它把常用工程工作流、代码工程和 GitHub/Obsidian Skill
 固定到指定 commit，并在仓库内维护个人第二大脑 Skill。新机器上只需要把这个仓库交给大模型，通过对话即可选择并
-完成用户级安装；选择 05 时还会配置本机暂停式 Syncthing 与登录后台启动，不添加远端设备或传输 Vault 内容。
+完成用户级安装；选择 05 时还会引导配置 Windows 主 Vault 与 SSH Linux 服务器的 Syncthing 双机同步、服务器镜像和 PC 端 GitHub 人工备份。
 第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.8.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.10.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -35,7 +35,7 @@
 本次仓库说明和内置资产来自同一份快照；外部来源继续固定到锁文件中的 commit。
 
 完成报告会分别列出“文件安装状态”“Codex 发现状态”和“功能验证状态”。新会话才能完成的检查会标记为待验证；
-安装时不执行 GitHub 登录、Vault 写入等技能业务操作。Matt Pocock 的隐式调用限制、全局建议区块和缺失依赖按
+除 05 明确选择并确认的第二大脑初始化、同步和本机备份配置外，安装时不执行 GitHub 登录或其他 Skill 的业务操作。Matt Pocock 的隐式调用限制、全局建议区块和缺失依赖按
 [兼容性说明](references/mattpocock-codex-compatibility.md)检查。
 
 安装完成后，Codex 还会提供一份[独立的安装后验证提示词](references/post-install-verification-prompt.md)，供你复制到同一
@@ -168,15 +168,28 @@ Schema 2 的稳定目录骨架如下：
 └─ attachments/
 ```
 
-安装 `05` 时，即使尚无第二大脑设备配置，Codex 也会复用或询问本机已存在的 Vault 路径，并安全补齐设备配置、Syncthing profile、根目录 `.stignore`
-和用户登录启动项。目标文件写入前先备份；有远端设备、其他活动文件夹、路径歧义或配置冲突时，停止 Syncthing 相关写入并报告。
-若没有可用的 Vault 路径，或本机同步配置遇到冲突，只暂停 Syncthing 配置，不阻断 Skill、全局规则和其他已选内容的安装；普通项目对话也不会因为第二大脑暂不可用而停止。
-本机监听限制为 loopback，发现/中继/LAN/NAT 关闭，Vault 文件夹保持暂停；不会添加远端设备、打开浏览器、传输 Vault 内容、
-配置 GitHub 备份或创建每周任务。已有 Schema 1 Vault/设备配置不迁移；以后必须由用户明确确认后，通过 `repair` 的 Schema 1→2 子动作迁移。
-启动项显式固定 GUI loopback 与暂停状态，并检查可能覆盖它们的 Syncthing 环境变量。只有本机 API 实际验证到 profile 设备身份、设备列表、目标路径/设备关联、暂停状态和实时连接均符合本机基线，才报告本机配置完成；API 请求禁用代理并拒绝重定向，API 不可用或状态不符时会保留已完成步骤并报告失败。macOS/Linux 新建启动文件采用原子仅创建操作，避免并发时覆盖用户文件。
+安装 `05` 时，Codex 会先分别确认设备角色与本机 Vault 路径：Windows 个人电脑是主 Vault 和唯一 GitHub 人工备份设备；SSH Linux 服务器只使用经你确认的空目录作为镜像，不创建第二份知识库。个人电脑的既有 Vault 保留原样；如果是新建空 Vault，先确认后按 Schema 2 初始化。服务器不会自行初始化笔记内容，而是在配对后接收 PC 主 Vault。
+在已记录配对对端的设备上重复安装 `05` 时，只读核验并保留当前配对、播种、晋级或双向状态，不会把 folder 暂停或退回首次安装网络基线。
+
+两台设备分别生成 Syncthing 配对卡，由你在两边 Codex 对话间人工传递。配对卡只包含设备标签、Syncthing Device ID、固定 folder ID、角色和传输方向；不含本地路径、第二大脑 `deviceId`、凭证或 SSH 私钥。配对时只登记双方设备和共享文件夹，保持暂停。初次传输前 PC 为 `sendonly`，服务器为 `receiveonly`；必须确认两端 Obsidian、Codex 和其他 Vault 写入者都已停写。首次传输后验证服务器 idle、无待同步项/错误/receive-only 本地差异，并比较双方内容 manifest SHA-256；通过后先将服务器切为 `sendreceive`，复核一致后再将 PC 切为 `sendreceive`。
+
+在你知情并确认后，Syncthing 才启用公共设备发现和官方 relay；监听保留 TCP loopback 并加入官方动态 relay 地址，不监听所有网卡。关闭 LAN 发现、LAN 地址公告和 Syncthing 自身的 NAT/UPnP 映射，不自动修改防火墙、路由器或端口转发；不打开浏览器。公共发现/relay 会接触设备 ID、IP 等连接元数据，传输内容仍由设备间 TLS 保护。若系统防火墙或网络策略阻止 relay 出站连接，Codex 会报告需要你或管理员处理的步骤，不自行提权或更改网络设备。
+
+Linux 无桌面服务器使用 systemd 用户服务；还需检查 `linger`，若需要管理员启用，Codex 会给出命令让你自己执行，不会静默使用 `sudo`。服务不强制 `--paused`，重启后按 Syncthing 保存的文件夹状态恢复同步。GitHub 私有仓库只在 PC 上按 [人工备份引导](bundled-skills/codex-second-brain/references/github-backup-bootstrap.md)确认本地 Git/远端配置；提交和推送仍由你逐项触发，不建每周自动化。
+
+### 你仍需亲自介入的部分
+
+- 在 Windows 个人电脑和 SSH Linux 服务器各自的 Codex 环境中安装/执行一次 `05`。一个设备上的 Codex 不能代另一台设备写入本机配置或登录启动项。
+- 提供或确认两端的 Vault 绝对路径；如果 PC 主 Vault 为空，确认是否初始化 Schema 2；服务器目标路径必须为空，创建前会再次确认。
+- 把两端 Codex 生成的 Syncthing 配对卡、服务器 `receiver-ready` 状态、manifest SHA-256 和后续核验结果，在两个对话间复制传递。卡片不含 Vault 路径或凭证。
+- 首次传输前，亲自确认两端 Obsidian、Codex、脚本等 Vault 写入者都已停止；在首次播种、服务器晋级和 PC 晋级各阶段按提示确认。Codex 不会假设另一台设备已停写。
+- 若服务器缺少 systemd linger，你需按提示自行执行管理员命令；如果公共 relay 出站被网络策略阻止，需你或管理员处理网络限制。Codex 不打开 GUI、不提权、不改防火墙或路由器。
+- GitHub 端需你选择/创建私有仓库并在本机完成认证；Git 初始化、远端设置、暂存、提交和推送均按步骤单独确认。
+
+路径不确定、服务器目录非空、未知设备、身份/路径冲突、Schema 1 迁移或同步验证失败时，停止相关写入与阶段转换、保留双方数据和配置备份；不阻断其他所选 Skill 安装。普通项目对话也不会因第二大脑暂不可用而停止。完整步骤和每阶段报告项见[双机引导](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)。
 
 `05` 不安装 Foam、`foam-cli`、VS Code 扩展或任何 MCP，也不提供用户自行运行的一键安装器。Codex 在 05 对话中调用内置
-Python 3.8+ 标准库辅助脚本；不自动安装 Python。详细的预检、冲突和安全边界见
+Python 3.10+ 标准库辅助程序；不自动安装 Python。详细的预检、冲突和安全边界见
 [`syncthing-bootstrap.md`](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)。本次变化不改变 `00`–`04`。
 完整方案见[第二大脑更新方案](references/second-brain-update-options.md)和
 [开源第二大脑组织形式调研](references/open-source-second-brain-organization-research.md)。
@@ -201,10 +214,10 @@ Python 3.8+ 标准库辅助脚本；不自动安装 Python。详细的预检、�
 - 用户未选择编号时只展示清单，不直接修改用户级配置。
 - 大模型直接使用可用的 Codex Skill、文件和仓库工具完成安装。
 - 外部上游内容按 `sources.lock.json` 中的 commit 获取；内置第二大脑 Skill 按懒人包版本和仓库 commit 追踪。
-- 不提供或要求用户自行运行本地一键安装脚本；只有 05 允许 Codex 调用内置同步辅助脚本。安装过程不使用 `npx`、不要求 Node.js、`uv`、Git 或 GitHub CLI；05 需要已有 Python 3.8+，不会自动安装 Python。
+- 不提供或要求用户自行运行本地一键安装脚本；只有 05 允许 Codex 调用内置同步辅助程序。安装过程不使用 `npx`、不要求 Node.js 或 `uv`；05 需要已有 Python 3.10+，不会自动安装 Python。Git/GitHub CLI 若缺失只影响 PC 端备份配置，Codex 会说明恢复路径。
 - GitHub/Obsidian Skill 后续可能会检查或引导这些工具，但那属于主动使用 Skill 的下一步。
 - 不在安装过程中要求 GitHub 登录或自动配置凭证。
-- `05` 只读取设备配置指向的 Vault 路径并维护根目录 `.stignore`，不读取或迁移笔记内容。Schema 1 到 Schema 2 只能由用户确认后的 `repair` 迁移子动作完成。
+- `05` 可在用户确认后初始化个人电脑的 Schema 2 Vault、配置双机 Syncthing 并设置 PC 端私有 GitHub 远端；不迁移 Schema 1。服务器只接收主 Vault，不独立初始化笔记。`sync-onboarding.json` 的 `status` 不是 `active`，或存在 `pendingOperation` 时（即使 status 为 `active`），全局规则暂停自动恢复与 Vault 写入，直到本机操作恢复且双机内容核验完成。
 - 配置或同名 Skill 冲突时，先展示差异并询问用户。
 - `05` 使用稳定注释标记原位维护 `AGENTS.md` 区块；不得覆盖其他全局规则或追加重复区块。
 - 安装完成后提示是否需要重启 Codex，以便刷新新 Skill。

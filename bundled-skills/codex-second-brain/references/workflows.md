@@ -4,15 +4,16 @@
 
 ## 初始化（`setup`）
 
-1. 读取 `<CodexHome>/second-brain/config.json`。尚未配置时，让用户选择已有 Vault 或用于初始化的空目录；只支持一个主 Vault。
-2. 写入前检查已有顶层路径、同名文件、明显同步冲突和 `.obsidian`。本 Skill 不安装或配置 Foam、Foam CLI、VS Code 扩展或 MCP。
-3. 展示将创建的根 `index.md`、四个 collection index、必要目录、16 个 Vault 模板、`90-System/schemas/schema-v2.md`、系统清单、本机配置、同步/备份职责和可选周任务；首次初始化必须确认。
-4. 只创建缺失内容。先使用 Vault 本地模板；首次建库从内置 Schema 2 assets 复制模板和 schema。已有模板、字段和正文不得覆盖，升级只展示差异。
-5. 根索引必须链接 Projects、Areas、Knowledge、Resources 四个 collection index，也可以链接系统清单；项目、Area、Topic 和正式内容按需创建，不预先生成空知识笔记或 Daily index。
-6. 设备配置保持 `schemaVersion: 2`、`syncMode: syncthing`、`backupMode: github-manual`。修改 Vault 路径、设备标签、备份角色、写入策略或自动化 ID 前展示差异；保留未知字段，不保存凭证。
-7. 若本 Skill 由懒人包 05 安装流程调用，按 [syncthing-bootstrap.md](syncthing-bootstrap.md) 检查本机同步配置已完成；不得添加远端设备、解除暂停或传输 Vault。普通 setup 不安装、不重配 Syncthing，只确认所选目录对应已配置的主 Vault。本机是否为唯一 GitHub 人工备份设备仍按原流程确认；不初始化 Git，不执行 commit、pull 或 push。
-8. 只有 `gitBackupDevice: true` 的唯一指定设备，在用户提供星期、当地时间和时区后，才创建一个调用 `weekly` 的原生周期任务。它只能写设备独立 Inbox 草案并执行只读健康检查。
-9. 重新读取生成结果，运行只读健康检查，报告 Vault、Schema 2、模板权威位置、同步/备份职责和自动化 ID。原生自动化不可用时保持 ID 为 `null` 并返回手动提示词。
+1. 读取 `<CodexHome>/second-brain/config.json` 并确认当前设备角色。懒人包 05 的个人电脑是主 Vault；SSH Linux 服务器仅接收同一 Vault 的镜像，不得另建第二份知识源。
+2. 在个人电脑上，尚未配置时让用户选择已有 Vault 或确认一个空目录用于初始化；只支持一个主 Vault。服务器端仅可使用经用户确认的空接收路径。
+3. 写入前检查已有顶层路径、同名文件、明显同步冲突和 `.obsidian`。本 Skill 不安装或配置 Foam、Foam CLI、VS Code 扩展或 MCP。
+4. 展示将创建的根 `index.md`、四个 collection index、必要目录、16 个 Vault 模板、`90-System/schemas/schema-v2.md`、系统清单、本机配置和同步/备份职责；首次初始化必须确认。不要把每周自动化纳入 05 默认安装。
+5. 只在个人电脑主 Vault 创建缺失内容。先使用 Vault 本地模板；首次建库从内置 Schema 2 assets 复制模板和 schema。已有模板、字段和正文不得覆盖，升级只展示差异。服务器不初始化这些内容，由首次同步接收主 Vault。
+6. 根索引必须链接 Projects、Areas、Knowledge、Resources 四个 collection index，也可以链接系统清单；项目、Area、Topic 和正式内容按需创建，不预先生成空知识笔记或 Daily index。
+7. 设备配置保持 `schemaVersion: 2`、`syncMode: syncthing`、`backupMode: github-manual`。`gitBackupDevice` 只在 PC 为 `true`，服务器为 `false`。修改 Vault 路径、设备标签或备份角色前展示差异；保留未知字段，不保存凭证。
+8. 若本 Skill 由懒人包 05 安装流程调用，按 [syncthing-bootstrap.md](syncthing-bootstrap.md) 完成两端配对、PC send-only 播种、服务器 receive-only 校验及分阶段双向启用。普通项目 `setup` 不安装、不重配 Syncthing，只确认所选目录对应已配置的主 Vault。
+9. 若由 05 首次配置 GitHub 人工备份，按 [github-backup-bootstrap.md](github-backup-bootstrap.md) 只在个人电脑处理本地 Git/私有远端；先展示差异并取得逐项确认，不自动 commit/push。普通 setup 不执行 Git 操作。
+10. 重新读取生成结果，运行只读健康检查，报告 Vault、Schema 2、模板权威位置、设备角色、同步/备份职责和仍需人工介入的项目。周任务只有在用户单独请求且明确给出时间后才可配置。
 
 ## 关联项目（`link`）
 

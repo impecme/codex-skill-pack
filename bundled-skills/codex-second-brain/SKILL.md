@@ -11,13 +11,13 @@ description: 将个人 Obsidian Markdown 第二大脑自然融入跨设备 Git �
 
 ## 默认运行方式
 
-在 `<CodexHome>/second-brain/config.json` 存在且 Vault 可访问时，日常维护自然融入项目工作：
+在 `<CodexHome>/second-brain/config.json` 存在且 Vault 可访问、并且 `<CodexHome>/second-brain/sync-onboarding.json` 不存在或满足 `status=active` 且没有 `pendingOperation` 时，日常维护自然融入项目工作：
 
 1. 每个会话首次对一个项目开展实质性工作前，静默执行一次 `startup` 只读恢复。
 2. 尚未结束的长任务出现经验证且以后仍有价值的阶段成果，或上下文可能丢失时，自动执行 `checkpoint`；只自动写入当前任务的设备独立 Session 或 Inbox 草案。
 3. 任务完成、暂停或交接前，有持久结果时自动执行 `shutdown`；过程性回复和没有持久结果的任务不创建空笔记。
 
-Daily 是人工时间入口，不是上述动作的自动写入目标。共享状态、索引、正式知识、决策、移动和删除都必须单独确认。第二大脑不可用时，不阻塞不依赖历史上下文的工程工作。
+Daily 是人工时间入口，不是上述动作的自动写入目标。共享状态、索引、正式知识、决策、移动和删除都必须单独确认。同步引导状态存在且 `status` 不是 `active`，或存在任何 `pendingOperation`（即使 status 仍是 `active`）时，不对 Vault 自动恢复或写入 Session/Inbox；继续完成不依赖 Vault 的主要工程工作，并保留待处理阶段。只有 05 的同步恢复流程可以处理 pending operation。第二大脑不可用或同步引导未完成时，不阻塞无关工程工作。
 
 ## 八个内部动作
 

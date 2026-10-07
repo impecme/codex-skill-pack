@@ -26,7 +26,7 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 | `02` | `codex-github` | 安装 GitHub 连接与 GitHub CLI 工作流 Skill |
 | `03` | `codex-obsidian` | 安装 Obsidian 连接与 Vault 访问工作流 Skill |
 | `04` | `codex-github-obsidian` | 安装 GitHub + Obsidian 联动工作流 Skill |
-| `05` | `codex-second-brain` | 安装第二大脑 Skill、合并全局规则，并配置本机暂停式 Syncthing |
+| `05` | `codex-second-brain` | 安装第二大脑 Skill，并引导完成 PC + SSH 服务器同步与 PC 端人工备份配置 |
 | `全部` | — | 依次安装 `00` 至 `05` |
 
 ## 路由规则
@@ -36,8 +36,8 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 3. 用户选择 `00` 时，读取并执行 [`skills/00-sol-luna-workflow/SKILL.md`](skills/00-sol-luna-workflow/SKILL.md)。
 4. 用户选择 `01` 时，读取并执行 [`skills/01-mattpocock-engineering/SKILL.md`](skills/01-mattpocock-engineering/SKILL.md)，安装 18 项 Skill 并按确认流程合并 Matt Pocock 建议区块。
 5. 用户选择 `02`、`03` 或 `04` 时，分别读取并执行对应子 Skill，安装参考仓库中的固定版本 Skill；用户选择 `05`
-   时安装本仓库内置的 `codex-second-brain`、合并全局规则，并按该入口完成一次性本机 Syncthing 引导。该引导只写设备配置、
-   Syncthing profile、Vault 根目录 `.stignore` 和用户级登录启动项；不读取/改写 Vault 笔记内容、不添加远端设备、不执行 Git 操作。
+   时安装本仓库内置的 `codex-second-brain`、合并全局规则，并执行 [第二大脑双机引导](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)
+   与 [GitHub 人工备份引导](bundled-skills/codex-second-brain/references/github-backup-bootstrap.md)。该流程在 PC 和 SSH Linux 服务器各自配置独立 Syncthing 身份，人工交换配对卡；首次只从 PC send-only 播种到服务器 receive-only，验证后再分阶段启用双向同步。GitHub 只在 PC 经确认配置人工备份。
 6. 用户选择“全部”时，依次读取并执行 `00` 至 `05`。来源安装冲突按对应子 Skill 处理；若仅 05 的 Syncthing 预检冲突，
    停止本机同步配置但保留其他已完成的 Skill 安装，并报告待处理项。
 7. 外部来源必须按 `sources.lock.json` 中的固定 commit 获取；无法锁定时不得无提示改用 `main`/`master`。内置来源使用同一仓库快照和锁文件中的包版本，并报告可验证的快照身份。
@@ -50,10 +50,10 @@ references 和内置资产必须来自同一快照；具体下载方式、版本
 ## 共同边界
 
 - 不提供或要求用户自行运行一键安装脚本。仅 05 安装阶段允许 Codex 调用内置辅助脚本完成锁定范围内的本机 Syncthing 配置。
-- 懒人包安装阶段不要求额外安装 Node.js、`npx`、`uv`、Git 或 GitHub CLI；05 使用已有 Python 3.8+ 标准库运行辅助脚本，不自动安装 Python。
-- 懒人包安装阶段不执行 GitHub 登录、全局 Git 配置、仓库创建、push、Vault 笔记写入或项目文件修改；05 仅允许写设备配置和 Vault 根目录 `.stignore`。
-- 安装 `05` 完成设备配置和本机 Syncthing 基线，但不初始化 Vault 内容、不配置远端设备，也不设置 GitHub 备份角色或每周任务。
-  配置文件存在且 Vault 可访问后，全局自然维护规则才启用；普通项目工作不要求用户手动提醒启动、记录或收尾。
+- 懒人包安装阶段不要求额外安装 Node.js、`npx`、`uv` 或 Python；05 使用已有 Python 3.10+ 标准库运行辅助程序，不自动安装 Python。
+- 05 不索取 SSH 密码/私钥，不静默提权，不打开 GUI 浏览器，不修改路由器、防火墙或端口转发，不自动执行 `git add`、commit、push 或周任务。PC 端 Git 初始化/远端配置需要先展示差异并取得用户确认。
+- 05 可以按确认初始化 PC 的 Schema 2 Vault，并在用户确认的服务器路径创建空接收目录；不得迁移 Schema 1，不得覆盖非空服务器目录或未知设备配置。
+- 配置文件存在且 Vault 可访问后，全局自然维护规则才启用；普通项目工作不要求用户手动提醒启动、记录或收尾。
 - 不自动安装 `sources.lock.json` 之外的 Skill、插件、MCP server 或凭证。
 - 不把 token、密码或其他凭证写入仓库、`AGENTS.md`、Skill 文件或 Obsidian 笔记。
 - 不把本仓库的入口文档复制成用户级 Skill；本仓库是对话式安装入口。
