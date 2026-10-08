@@ -2,7 +2,21 @@
   "schemaVersion": 1,
   "package": {
     "name": "codex-lazy-pack",
-    "version": "0.11.1"
+    "version": "0.12.0"
+  },
+  "updatePolicy": {
+    "authority": "this snapshot and the source commits pinned below",
+    "managedContent": "backup-and-verify-before-applying-locked-version",
+    "unknownOwnership": "preserve-and-confirm-once",
+    "receiptFields": [
+      "sourceIds-and-commits",
+      "target-paths",
+      "managed-file-lists-and-sha256",
+      "managed-toml-keys-or-markers",
+      "ownership-evidence",
+      "backup-path-and-restore-map",
+      "per-unit-result"
+    ]
   },
   "generatedAt": "2026-10-08",
   "packs": [
@@ -83,22 +97,44 @@
         {
           "sourcePath": "AGENTS.md",
           "target": "AGENTS.md",
-          "type": "file"
+          "type": "file",
+          "ownership": {
+            "kind": "managed-section",
+            "startMarker": "<!-- codex-sol-luna-workflow-managed:start -->",
+            "endMarker": "<!-- codex-sol-luna-workflow-managed:end -->"
+          }
         },
         {
           "sourcePath": ".codex/config.toml",
           "target": "config.toml",
-          "type": "file"
+          "type": "file",
+          "ownership": {
+            "kind": "toml-keys",
+            "keys": [
+              "model",
+              "model_reasoning_effort",
+              "agents.enabled",
+              "agents.default_subagent_model",
+              "agents.default_subagent_reasoning_effort",
+              "agents.max_concurrent_threads_per_session"
+            ]
+          }
         },
         {
           "sourcePath": ".codex/agents/luna-worker.toml",
           "target": "agents/luna-worker.toml",
-          "type": "file"
+          "type": "file",
+          "ownership": {
+            "kind": "whole-file"
+          }
         },
         {
           "sourcePath": ".codex/agents/sol-advisor.toml",
           "target": "agents/sol-advisor.toml",
-          "type": "file"
+          "type": "file",
+          "ownership": {
+            "kind": "whole-file"
+          }
         }
       ]
     },
@@ -122,18 +158,24 @@
           "sourcePath": "skills/05-obsidian",
           "target": "codex-obsidian"
         }
-      ]
+      ],
+      "ownership": {
+        "kind": "per-skill-file-manifest"
+      }
     },
     {
       "id": "bundled-codex-second-brain",
       "kind": "bundled-skill",
       "repository": "impecme/codex-skill-pack",
       "url": "https://github.com/impecme/codex-skill-pack",
-      "packageVersion": "0.11.1",
+      "packageVersion": "0.12.0",
       "vaultSchemaVersion": 2,
       "deviceConfigSchemaVersion": 2,
       "sourcePath": "bundled-skills/codex-second-brain",
       "target": "codex-second-brain",
+      "ownership": {
+        "kind": "per-skill-file-manifest"
+      },
       "globalInstructions": {
         "sourcePath": "bundled-skills/codex-second-brain/assets/global-agents-section.md",
         "target": "AGENTS.md",
@@ -169,6 +211,9 @@
         "wayfinder",
         "wizard"
       ],
+      "ownership": {
+        "kind": "per-skill-file-manifest"
+      },
       "globalInstructions": {
         "sourcePath": "skills/01-mattpocock-engineering/assets/global-skill-suggestion-section.md",
         "target": "AGENTS.md",

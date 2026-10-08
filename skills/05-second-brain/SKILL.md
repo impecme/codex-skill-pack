@@ -28,8 +28,15 @@ description: 安装并配置个人第二大脑，在 Windows 主电脑与 SSH Li
 - 全局规则目标：`<CodexHome>/AGENTS.md` 中 `codex-second-brain-managed` 标记包围的受管区块
 
 先读取并执行[共享安装规则](../../references/conversation-install.md)的新设备预检，以其确定的 `<SkillRoot>` 为目标。
-检查有效全局规则是否受 `AGENTS.override.md` 遮蔽；若需合并到 override，按共享规则单独展示差异并确认，
-记录实际规则目标。下文 `<CodexHome>/AGENTS.md` 是默认目标；用户确认改用有效 override 后，在实际目标上执行相同的受管区块检查。
+检查有效全局规则是否受 `AGENTS.override.md` 遮蔽并记录实际规则目标。下文 `<CodexHome>/AGENTS.md` 是默认目标；首次安装若用户要求写入有效 override，仍须先确认。更新时只在旧安装报告记录了用户确认的同一 override 目标和受管区块时原位更新；否则不改 override。
+
+## 已安装版本更新与首次配置分流
+
+先读取 `<CodexHome>/lazy-pack/installations/` 中的报告；若报告、可信旧来源或有效受管区块表明 `05` 已安装，本次按**更新**处理，即使用户口头说“安装”或选择“全部”。受管目录有差异时依共享规则备份并自动更新 `codex-second-brain` Skill；合法的 `codex-second-brain-managed` 区块有差异时备份整个目标文件并原位更新。
+
+更新分支只更新已确认归属的 Skill 文件和全局规则，并只读报告现有第二大脑状态；不执行下方“双设备同步与第二大脑配置”中的首次安装步骤，不调用 `setup_syncthing.py` 或 `syncthing_pairing.py` 的 `begin`、`apply`、`pair`、`arm-receiver`、`start-source`、`promote-server`、`promote-primary`、`complete` 等操作，也不暂停、启动、停止、重启 Syncthing。不得改写设备配置、同步引导状态、Vault、`.stignore`、Git 元数据或设备/对端身份。若本次同时希望恢复或继续双机引导，先完成更新，再单独按相应阶段说明并请求确认。
+
+安装记录缺失时，按共享规则用旧报告中的来源 commit 重建清单；归属或旧文本边界无法证明时只询问一次具体接管范围。更新完成后记录受管文件清单、哈希和备份位置；不能把更新 Skill 文件描述成第二大脑或跨设备同步已配置。
 
 ## 双设备同步与第二大脑配置
 
@@ -52,20 +59,16 @@ description: 安装并配置个人第二大脑，在 Windows 主电脑与 SSH Li
 
 1. 读取内置源目录的全部文件，确认 `SKILL.md`、七个 Markdown reference（`data-model.md`、`github-backup-bootstrap.md`、`linking-and-health.md`、`migration-v1-to-v2.md`、`safety-and-sync.md`、`syncthing-bootstrap.md`、`workflows.md`）、`assets/vault-schemas/schema-v2.md`、
    `assets/vault-templates/` 下恰好 16 个模板、设备配置模板和全局规则资产完整可读。
-2. 读取目标目录。目录不存在时标记为待安装；内容相同则标记为 `already-current`。
-3. 目标目录已存在且内容不同或来源不明时，先展示新增、删除和修改的路径。
-4. 通过对话让用户选择替换、手动合并或跳过；确认替换或应用合并后，先备份整个目录再写入。未确认时保持 `pending`，不要静默覆盖。
-5. 仅在本机 `setup_syncthing.py begin` 成功并核对其实际状态后，才把自然维护规则合并到有效的 `<CodexHome>/AGENTS.md`；首次配对的非 `active` 状态必须先于全局规则落盘，若 begin 因冲突失败，不新增或启用该规则。之后单独读取 `<CodexHome>/AGENTS.md`：
-   - 文件不存在时，展示将创建的内容并在确认后写入受管区块。
-   - 没有对应标记时，展示追加差异，备份已有文件后再确认合并。
-   - 已有完全相同区块时标记为 `already-current`。
-   - 已有一对完整标记但区块内容不同时，展示差异并让用户选择更新、手动合并或跳过，不得追加第二份。
-   - 标记残缺、嵌套或重复时，停止自动修改并报告 `pending`；保留原文件，展示需手动修复的范围。
-6. 替换或合并后重新读取目标 Skill 和 `AGENTS.md`，验证 frontmatter、目录结构、全部 references 链接、
+2. 读取旧安装报告及可信旧来源清单。目录不存在时标记为待安装；内容相同则标记为 `already-current`。
+3. 对已确认归本 Skill 管理的目录文件，展示新增、修改和删除路径，备份整个目标 Skill 目录并核验，然后自动更新到当前懒人包锁定版本；受管文件本地修改以新版为准。只删除旧清单证明由本 Skill 交付、且新版不再提供的文件，保留未知附加文件。
+4. 新版新增路径与未知文件碰撞、来源不明、旧清单无法重建或目录含其他 Skill 内容时，只暂停该目录并询问一次具体接管范围；不能仅凭 `codex-second-brain` 同名目录清空重建。备份失败、路径不安全或目标在检查后变化时停止该单元。
+5. 若本次是已安装版本更新，跳过双设备首次配置，只读保留设备和同步状态。仅首次安装时，才在本机 `setup_syncthing.py begin` 成功并核对实际状态后，将自然维护规则写入有效的 `<CodexHome>/AGENTS.md`；begin 冲突时不新增或启用该规则。
+6. 单独检查 `<CodexHome>/AGENTS.md`：合法且归属已确认的受管区块有差异时，先备份整个文件再自动原位更新；其他 pack 区块及区块外正文逐字保留。缺少区块时按共享规则核验旧安装归属后恢复/追加。标记残缺、嵌套、重复或旧版文本边界不明时，停止该文件写入并报告 `pending`。
+7. 写入后重新读取目标 Skill 和 `AGENTS.md`，验证 frontmatter、目录结构、全部 references 链接、
    schema 资产、16 个模板及 Schema 2 版本字段。设备配置模板先替换一组安全示例值再解析 JSON；不得要求未渲染占位符本身是合法 JSON。最后确认受管区块恰好出现一次且内容与源资产一致。
-7. 从 `sources.lock.json` 记录当前懒人包版本、`vaultSchemaVersion` 和 `deviceConfigSchemaVersion` 及本次快照身份，
-   按共享规则分别报告文件安装、客户端发现和功能验证状态；规则尚未刷新或被遮蔽不能标记为已生效。
-8. 安装阶段按“第二大脑配置”执行；首次播种前可检查/初始化经确认的 PC 主 Vault Schema 2 内容。不得迁移 Schema 1、跳过阶段确认、索取凭证、配置 MCP 或创建每周自动化。
+8. 从 `sources.lock.json` 记录当前懒人包版本、`vaultSchemaVersion` 和 `deviceConfigSchemaVersion` 及本次快照身份，
+   按共享规则分别报告文件安装、客户端发现和功能验证状态；规则尚未刷新或被遮蔽不能标记为已生效。更新分支还需报告只读观察到的设备/同步阶段，不能宣称配置完成。
+9. 仅首次安装时按“双设备同步与第二大脑配置”执行；首次播种前可检查/初始化经确认的 PC 主 Vault Schema 2 内容。更新分支不得重新初始化。不得迁移 Schema 1、跳过阶段确认、索取凭证、配置 MCP 或创建每周自动化。
 
 ### 安装阶段验证清单（不是 Vault 迁移）
 
@@ -76,7 +79,7 @@ description: 安装并配置个人第二大脑，在 Windows 主电脑与 SSH Li
   设备配置模板和 Vault schema 资产不得声明旧版本。
 - 每个模板必须声明 `schema_version: 2`、`id`、`title`、`type`、`created`、`updated`；`id` 占位符落盘前必须替换为对应类型前缀的 UUIDv4。
 - 复制后的 Skill 与源目录逐文件一致，且其 references 链接、16 个模板和 schema 资产均存在。
-- 每台设备本机准备阶段核对配置、启动项、后台运行和无浏览器启动；重复运行时，已记录对端的任一配对阶段必须只读保留，不得应用首次安装基线或改变同步状态；配对等待阶段两端 folder 必须暂停；首次传输和分阶段晋级后分别核对规则中列出的状态。只有两端完成 `complete` 后才将该端状态标为 `active`。
+- 仅首次配置时核对每台设备本机准备、配对、首次传输和分阶段晋级状态；已安装版本更新只读核验并保留原状态，不调用推进状态的辅助操作。配对等待阶段两端 folder 必须暂停；只有两端完成 `complete` 后才将该端状态标为 `active`。
 - `<CodexHome>/AGENTS.md` 的 `codex-second-brain-managed` 起止标记恰好各出现一次，受管区块与源资产一致；其他全局规则保持不变。
 - 安装仅访问用户确认的 Vault 路径；PC 首次初始化 Schema 2、服务器创建空镜像目录和开始首次传输均需对应确认。不得迁移 Schema 1；Schema 1→2 迁移必须稍后显式调用 `repair` 子动作并再次确认。
 
@@ -86,4 +89,4 @@ description: 安装并配置个人第二大脑，在 Windows 主电脑与 SSH Li
 Skill 与全局规则的目标和状态、备份位置，以及是否需要重启 Codex。
 
 全局规则只有在设备配置存在、Vault 可访问且同步引导状态文件不存在或为 `active` 时才执行自然维护；begin 成功至两端完成核验期间不读写 Vault。普通项目工程工作不会因此阻塞。首次建库和首次
-项目关联仍需确认目标及变更；已有同名目录或文件不得静默覆盖。若检测到 Schema 1，只报告可迁移项，不得在安装阶段自动升级。
+项目关联仍需确认目标及变更；不能证明归本 Skill 管理的同名目录或文件不得自动接管。若检测到 Schema 1，只报告可迁移项，不得在安装阶段自动升级。
