@@ -27,7 +27,7 @@ aliases: []
 
 ## 项目导航
 
-- 当前工作摘要：[[10-Projects/{{PROJECT_ID}}/status|项目状态]]
+- 当前工作摘要：[[{{PATH_PROJECTS}}/{{PROJECT_ID}}/status|项目状态]]
 
 ### 最近工作记录
 

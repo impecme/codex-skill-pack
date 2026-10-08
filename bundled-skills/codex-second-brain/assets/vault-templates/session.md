@@ -16,8 +16,8 @@ sources: []
 
 ## 导航
 
-- 项目：[[10-Projects/{{PROJECT_ID}}/index|项目索引]]
-- 项目状态：[[10-Projects/{{PROJECT_ID}}/status|项目状态]]
+- 项目：[[{{PATH_PROJECTS}}/{{PROJECT_ID}}/index|项目索引]]
+- 项目状态：[[{{PATH_PROJECTS}}/{{PROJECT_ID}}/status|项目状态]]
 
 ## 已完成
 

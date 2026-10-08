@@ -2,6 +2,8 @@
 
 本参考只由 `repair` 的迁移子动作读取。当前懒人包锁定的最新受支持 Vault 格式是 Schema 2；“升级到最新版”只表示升级到锁文件声明的 Schema 2，不从远端追踪未知版本。它不是第九个模式，也不在懒人包安装阶段运行。迁移只改变 Vault 笔记结构；设备配置继续保持 Schema 2，且不会安装 Foam、同步工具、MCP 或执行 Git。
 
+迁移不隐含根目录中文化。先按现有 Vault 结构识别路径；迁移输出必须统一使用用户确认的 `schema2-zh-cn` 或 `schema2-ascii` 布局。既有 ASCII 根目录明确吻合时默认保留原路径；任何根目录重命名都必须作为单独迁移差异展示并明确确认，不得因 Schema 1→2 升级而顺带改名。
+
 ## 完成条件
 
 迁移只有同时满足以下条件才算完成：
@@ -12,6 +14,7 @@
 - 所有受管笔记拥有 Schema 2 通用元数据和唯一的类型前缀 UUIDv4。
 - 内部链接是无前导 `/`、无 `.md` 的 Vault 根相对路径限定 Wikilink。
 - Vault 本地模板保持权威，Syncthing/GitHub 职责和设备配置没有改变。
+- 系统清单记录已确认的 `directory_layout`；所有输出路径均属于该布局且不存在平行根目录。
 - 原输入已按确认的路径移除，活动 Vault 不同时保留两套结构；外部备份和迁移报告仍可用于回滚。
 
 ## 前置阻断条件
@@ -56,13 +59,13 @@ Dry-run 对 Vault 只读，可以向外部 staging 写报告和候选文件。�
 | 缺失四个 collection index | 原路径 `index.md` | 只创建缺失项，不覆盖已有文件。 |
 | 项目 `overview.md` | 项目 `index.md` | 保留项目身份、远端、知识范围和正文；生命周期状态移入 `status.md`。 |
 | 项目 `status.md` | 原路径 | 转成 `project-status`，保存生命周期、目标、进度、阻塞和下一步。 |
-| 项目 `lessons.md` | `lessons/<les-UUID>-legacy-lessons.md` | 有内容时原样保存为一条 `candidate` legacy Lesson，并注明迁移来源；不自动按标题拆分。空模板只在备份后移除。 |
-| Area 平铺文件 `<area>.md` | `20-Areas/<area>/index.md` | 保留正文并补 Area 元数据；已有目标不同则阻断。 |
-| Knowledge 平铺文件 | `30-Knowledge/general/<kn-UUID>-<slug>.md` | 不猜主题；已有主题目录保留，并为缺失主题创建 `index.md`。 |
-| Resource | `40-Resources/<source-type>/<res-UUID>-<slug>.md` | 只有旧元数据明确时保留分类，否则进入 `other`。 |
-| Daily | `50-Daily/<year>/<YYYY-MM-DD>.md` | 只按明确日期归档到年份目录，不改写正文。 |
+| 项目 `lessons.md` | `lessons/<les-UUID>-历史经验待整理.md` | 有内容时原样保存为一条 `candidate` Lesson，并注明迁移来源；不自动按标题拆分。空模板只在备份后移除。 |
+| Area 平铺文件 `<area>.md` | 当前布局 `Areas/<area>/index.md` | 保留正文并补 Area 元数据；已有目标不同则阻断。 |
+| Knowledge 平铺文件 | 当前布局 `Knowledge/general/<kn-UUID>-<中文主题>.md` | 不猜主题；已有主题目录保留，并为缺失主题创建 `index.md`。 |
+| Resource | 当前布局 `Resources/<source-type>/<res-UUID>-<中文主题>.md` | 只有旧元数据明确时保留分类，否则进入 `other`。 |
+| Daily | 当前布局 `Daily/<year>/<YYYY-MM-DD>.md` | 只按明确日期归档到年份目录，不改写正文。 |
 | Decision/Experiment/Session/Inbox | 对应 Schema 2 路径 | 保留正文，补元数据；正式原子文件名加入稳定 ID，Session/Inbox 保留设备独立命名。 |
-| Vault 模板/schema | `90-System/templates/`、`90-System/schemas/` | 比较定制内容，只有确认后升级；不得用内置资产覆盖用户模板。 |
+| Vault 模板/schema | 当前布局 `System/templates/`、`System/schemas/` | 比较定制内容，只有确认后升级；不得用内置资产覆盖用户模板。 |
 
 旧 `lessons.md` 可能包含多个主题，但迁移不做语义猜分。迁移后的 legacy Lesson 明确标记“待人工拆分”；以后由 `promote` 或 `repair` 在逐条复核后原子化。
 

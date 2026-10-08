@@ -28,4 +28,4 @@ tags: []
 
 ## 相关主题
 
-- 主题索引：[[30-Knowledge/{{TOPIC_ID}}/index|主题索引]]
+- 主题索引：[[{{PATH_KNOWLEDGE}}/{{TOPIC_ID}}/index|主题索引]]

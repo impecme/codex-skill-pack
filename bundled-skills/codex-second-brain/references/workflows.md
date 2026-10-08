@@ -6,10 +6,10 @@
 
 1. 读取 `<CodexHome>/second-brain/config.json` 并确认当前设备角色。懒人包 05 的个人电脑是主 Vault；SSH Linux 服务器仅接收同一 Vault 的镜像，不得另建第二份知识源。
 2. 在个人电脑上，尚未配置时让用户选择已有 Vault 或确认一个空目录用于初始化；只支持一个主 Vault。服务器端仅可使用经用户确认的空接收路径。
-3. 写入前检查已有顶层路径、同名文件、明显同步冲突和 `.obsidian`。本 Skill 不安装或配置 Foam、Foam CLI、VS Code 扩展或 MCP。
-4. 展示将创建的根 `index.md`、四个 collection index、必要目录、16 个 Vault 模板、`90-System/schemas/schema-v2.md`、系统清单、本机配置和同步/备份职责；首次初始化必须确认。不要把每周自动化纳入 05 默认安装。
+3. 写入前读取系统清单与 schema，按 Schema 资产规则识别目录布局；新建 Vault 默认使用 `schema2-zh-cn`，既有 `schema2-ascii` 保持原样。检查两套布局的入口、同名文件、明显同步冲突和 `.obsidian`；混合、冲突或非空未知布局停止相关写入，不得新建平行目录。本 Skill 不安装或配置 Foam、Foam CLI、VS Code 扩展或 MCP。
+4. 展示将创建的根 `index.md`、四个 collection index、必要目录、16 个 Vault 模板、所选布局对应的 `schemas/schema-v2.md`、系统清单、本机配置和同步/备份职责；首次初始化必须确认。所有模板路径变量须先替换为所选布局的实际目录名。不要把每周自动化纳入 05 默认安装。
 5. 只在个人电脑主 Vault 创建缺失内容。先使用 Vault 本地模板；首次建库从内置 Schema 2 assets 复制模板和 schema。已有模板、字段和正文不得覆盖，升级只展示差异。服务器不初始化这些内容，由首次同步接收主 Vault。
-6. 根索引必须链接 Projects、Areas、Knowledge、Resources 四个 collection index，也可以链接系统清单；项目、Area、Topic 和正式内容按需创建，不预先生成空知识笔记或 Daily index。
+6. 根索引必须链接所选布局下 Projects、Areas、Knowledge、Resources 四个 collection index，也可以链接系统清单；项目、Area、Topic 和正式内容按需创建，不预先生成空知识笔记或 Daily index。
 7. 设备配置保持 `schemaVersion: 2`、`syncMode: syncthing`、`backupMode: github-manual`。`gitBackupDevice` 只在 PC 为 `true`，服务器为 `false`。修改 Vault 路径、设备标签或备份角色前展示差异；保留未知字段，不保存凭证。
 8. 若本 Skill 由懒人包 05 安装流程调用，按 [syncthing-bootstrap.md](syncthing-bootstrap.md) 完成两端配对、PC send-only 播种、服务器 receive-only 校验及分阶段双向启用。普通项目 `setup` 不安装、不重配 Syncthing，只确认所选目录对应已配置的主 Vault。
 9. 若由 05 首次配置 GitHub 人工备份，按 [github-backup-bootstrap.md](github-backup-bootstrap.md) 只在个人电脑处理本地 Git/私有远端；先展示差异并取得逐项确认，不自动 commit/push。普通 setup 不执行 Git 操作。
@@ -18,7 +18,7 @@
 ## 关联项目（`link`）
 
 1. 读取设备配置并只读获取 Git 远端；按 [data-model.md](data-model.md) 规范化，不修改 Git 配置。
-2. 在 `10-Projects/*/index.md` 的 `repository_urls` 中精确匹配。目录名、相似标题、fork 关系和本地路径都不能替代远端匹配。
+2. 在逻辑目录 `Projects/*/index.md` 的 `repository_urls` 中精确匹配；实际路径来自当前 Vault 的布局。目录名、相似标题、fork 关系和本地路径都不能替代远端匹配。
 3. 没有匹配时，展示候选、ASCII `project_id`、为项目索引和状态页分别生成的类型前缀 UUIDv4、待创建目录/文件及 collection index 差异；确认后才写入。
 4. 确认关联已有项目时，只在确实缺少远端别名后提出追加差异。多个匹配、重复 ID、目标变化或同步冲突时停止。
 5. 项目 `index.md` 只保存身份、远端、知识范围和导航；生命周期及当前目标、进度、阻塞、下一步都由 `status.md` 维护。
@@ -27,7 +27,7 @@
 ## 开始工作（`startup`）
 
 1. 每个会话首次对同一 Git 项目开展实质性工作时自动运行一次；已恢复过则不重复。
-2. 解析设备配置并确认 Vault 可访问。配置缺失、Vault 暂不可达或有同步冲突时，不阻塞不依赖历史的工程工作；只有历史会影响正确性时才暂停。
+2. 解析设备配置并确认 Vault 可访问；按 [data-model.md](data-model.md) 识别并核验目录布局。配置缺失、Vault 暂不可达、布局混合/歧义或有同步冲突时，不读写无法确定路径的 Vault 内容，也不阻塞不依赖历史的工程工作；只有历史会影响正确性时才暂停。
 3. 只读识别项目。未关联时准备一次性 `link` 方案，但不猜测项目、不在未确认时创建项目 Session。
 4. 读取项目 `index.md`、`status.md`、最近 Session，以及 `knowledge_scopes` 明确列出的 Area/Topic index 和当前任务直接需要的已链接笔记；不得扫描整个 Vault。
 5. 需要时间线背景时可只读最近 Daily；不得自动创建或修改 Daily。
@@ -54,7 +54,7 @@
 1. 根据配置时区读取最近七天实际有活动的 Daily、Session、项目状态和必要索引；不扫描无关归档或附件。
 2. 找出已完成工作、重复阻塞、过期事项、重复概念、Lesson/Knowledge 候选，并保留来源 Wikilink。
 3. 按 [linking-and-health.md](linking-and-health.md) 检查元数据、重复 ID、裸链接、断链、索引覆盖、正式知识孤儿、模板权威和同步冲突迹象。
-4. 创建或追加设备独立的 `00-Inbox/weekly-review-<year>-W<week>-<device-short>.md` 草案；保留人工内容并新增带时间戳章节。
+4. 在当前布局的逻辑目录 `Inbox/` 创建或追加设备独立的 `每周整理-<year>-W<week>-<device-short>.md` 草案；保留人工内容并新增带时间戳章节。
 5. 不自动修改项目状态、任何 index、Lesson、Knowledge、Decision、文件位置或 Git。没有新增候选、问题或待办时保持安静。
 
 ## 沉淀知识（`promote`）

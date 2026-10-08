@@ -13,13 +13,13 @@ updated: "{{DATE}}"
 
 ## 集合导航
 
-- 项目：[[10-Projects/index|项目集合]]
-- 领域：[[20-Areas/index|领域集合]]
-- 知识：[[30-Knowledge/index|知识集合]]
-- 资源：[[40-Resources/index|资源集合]]
-- 系统：[[90-System/second-brain|系统清单]]
+- 项目：[[{{PATH_PROJECTS}}/index|项目集合]]
+- 领域：[[{{PATH_AREAS}}/index|领域集合]]
+- 知识：[[{{PATH_KNOWLEDGE}}/index|知识集合]]
+- 资源：[[{{PATH_RESOURCES}}/index|资源集合]]
+- 系统：[[{{PATH_SYSTEM}}/second-brain|系统清单]]
 
-每日笔记位于 `50-Daily/<year>/`，由人工按日期维护。
+每日笔记位于 `{{PATH_DAILY}}/<year>/`，由人工按日期维护。
 
 ## 使用约定
 

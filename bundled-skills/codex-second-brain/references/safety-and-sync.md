@@ -14,7 +14,7 @@
 在全局自然维护规则已安装、`<CodexHome>/second-brain/config.json` 存在、Vault 可访问且没有同步冲突时，以下例行动作可无打断执行：
 
 - 只读获取当前 Git 项目、相关项目索引/状态、最近 Session、明确的知识范围和必要的 Daily。
-- 为当前已关联任务创建一条带时间戳和设备 ID 的 Session，或在 `00-Inbox/` 创建设备独立草案。
+- 为当前已关联任务创建一条带时间戳和设备 ID 的 Session，或在当前布局的逻辑目录 `Inbox/` 创建设备独立草案。
 - 在同一任务中重新读取并追加自己的 Session；保留已有人工内容，不覆盖。
 - 生成拟议差异、健康报告、迁移 dry-run 和外部 staging 清单；这些输出本身不改变 Vault。
 
@@ -22,7 +22,7 @@
 
 - 修改 `status.md`、根 `index.md`、任一 collection index、Area/Knowledge 主题 index 或其他共享状态。
 - 创建、修改、合并、晋升、归档或替换正式 Knowledge、Lesson、Decision、Experiment 或 Resource。
-- 修改任何 frontmatter schema、ID、type、状态、仓库映射、`90-System/second-brain.md` 或 `90-System/templates/`。
+- 修改任何 frontmatter schema、ID、type、状态、仓库映射、逻辑目录 `System/second-brain.md` 或 `System/templates/`。
 - 创建首次 Vault、首次项目关联、设备配置、Syncthing 可见配置、周期自动化，或执行 Schema 迁移。
 - 移动、重命名、删除、批量重写链接，或把任何候选文件变成新的正式路径。
 - 对任何 Git 仓库执行 init、add、commit、pull、push、branch 或历史操作。
@@ -37,7 +37,7 @@
 
 1. 解析 `config.json`，确认 Vault 根、设备 ID、写入策略和 GitHub 备份角色；不得把绝对路径复制到 Vault、代码仓库或报告以外的持久笔记。
 2. 重新读取目标文件、父目录和相关 index，检查目标是否存在、是否已被人工修改、是否有重复 ID、明显的 Syncthing 冲突文件或其他写入者。
-3. 只根据当前读取版本生成最小差异。若需要模板，先读取 Vault 的 `90-System/templates/`；比较定制字段，禁止静默覆盖。
+3. 只根据当前读取版本生成最小差异。若需要模板，先读取当前布局对应的 Vault `System/templates/`；比较定制字段，禁止静默覆盖。
 4. 对共享或高风险目标展示差异并取得对应确认；安全新增的设备独立文件也必须确保文件名唯一。
 5. 应用后立即重新读取目标，验证 Schema 2 元数据、ID、链接目标、来源和状态；失败时保留现状、报告证据，不继续试错。
 6. 写入笔记、Git commit 和 Git push 是三个独立事件；一个事件的确认不代表其他事件获准。
@@ -46,7 +46,7 @@
 
 ## 模板权威与内置资产
 
-- `<Vault>/90-System/templates/` 是当前 Vault 的权威模板，`90-System/schemas/schema-v2.md` 和系统清单记录当前约定。模板只规定初始形状，不授权修改目标文件。
+- `<Vault>/<当前布局的 System>/templates/` 是当前 Vault 的权威模板，`schemas/schema-v2.md` 和系统清单记录当前约定。模板只规定初始形状，不授权修改目标文件。
 - `bundled-skills/codex-second-brain/assets/vault-templates/` 与 `assets/vault-schemas/` 只能用于 bootstrap、repair 或 fallback，不能覆盖 Vault 本地版本。
 - Vault 模板缺失时，Session/Inbox 可以临时使用内置 Schema 2 模板并报告 repair 待办；创建共享或正式笔记前必须展示模板恢复差异并确认。目标模板存在时，即使内置版本不同也不得静默替换。
 - 模板升级必须展示内置版本与 Vault 本地版本的差异。已定制模板保持本地权威，由用户选择保留或手动合并。
@@ -100,7 +100,7 @@ Schema 1→2 迁移的默认外部路径固定为 `<CodexHome>/second-brain/back
 
 - 调用 `codex-second-brain` 的 `weekly` 模式。
 - 读取最近七天必要的 Daily、Session 和索引，附带只读健康检查。
-- 只向带设备 ID 的 `00-Inbox/weekly-review-<year>-W<week>-<device-id>.md` 写入草案。
+- 只向当前布局的 `Inbox/每周整理-<year>-W<week>-<device-id>.md` 写入草案。
 - 不修改共享状态、任何 index、正式知识、Decision、文件位置，不执行 Git。
 - 没有新候选、健康问题或需用户处理的事项时保持安静。
 

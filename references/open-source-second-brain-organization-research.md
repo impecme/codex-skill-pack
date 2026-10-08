@@ -95,87 +95,86 @@ Foam 官方把它定义为建立在 VS Code 和 GitHub 之上的个人知识管�
 
 需要优化的不是层数，而是以下边界：
 
-1. `00-Inbox`、`10-Projects`、`20-Areas/30-Knowledge` 表达内容成熟度。
-2. `40-Resources` 和 `50-Daily` 表达内容类型或入口，不是第四、第五层。
-3. `60-Archive` 表达生命周期状态，`90-System` 和 `attachments` 属于基础设施。
+1. Inbox、Projects、Areas/Knowledge 表达内容成熟度；新建 Vault 使用中文目录名并保留数字前缀。
+2. Resources 和 Daily 表达内容类型或入口，不是第四、第五层。
+3. Archive 表达生命周期状态，System 和 Attachments 属于基础设施。
 4. `Daily`、项目 Session 和 Inbox 目前可能重复记录同一内容。
 5. 多设备同时追加同一个 Daily 或 `status.md` 容易产生 Syncthing 冲突。
 6. 正式知识已有 `sources`，但仍缺少稳定笔记 ID、派生来源和替代关系。
 
 ## Schema 2 推荐组织形式
 
-保留现有顶层目录名，避免为了形式重命名和迁移；把项目导航、项目状态和经验条目拆开，并让主题目录自带索引：
+新建 Vault 使用中文顶层目录；既有 ASCII Vault 为兼容性保留原路径，不因升级迁移。把项目导航、项目状态和经验条目拆开，并让主题目录自带索引：
 
 ```text
 <Vault>/
 ├─ index.md
-├─ 00-Inbox/
-│  ├─ <year>/<month>/<timestamp>-<device-short>-<slug>.md
-│  └─ weekly-review-<year>-W<week>-<device-short>.md
-├─ 10-Projects/
+├─ 00-收件箱/
+│  ├─ <year>/<month>/<timestamp>-<device-short>-<中文主题>.md
+│  └─ 每周整理-<year>-W<week>-<device-short>.md
+├─ 10-项目/
 │  ├─ index.md
 │  └─ <project-id>/
 │     ├─ index.md
 │     ├─ status.md
-│     ├─ sessions/<year>/<timestamp>-<device-short>-<id8>.md
-│     ├─ decisions/<decision-id>-<slug>.md
-│     ├─ experiments/<experiment-id>-<slug>.md
-│     └─ lessons/<lesson-id>-<slug>.md
-├─ 20-Areas/
+│     ├─ sessions/<year>/<timestamp>-<device-short>-<id8>-<中文摘要>.md
+│     ├─ decisions/<decision-id>-<中文主题>.md
+│     ├─ experiments/<experiment-id>-<中文主题>.md
+│     └─ lessons/<lesson-id>-<中文主题>.md
+├─ 20-领域/
 │  ├─ index.md
 │  └─ <area-id>/index.md
-├─ 30-Knowledge/
+├─ 30-知识/
 │  ├─ index.md
 │  └─ <topic>/
 │     ├─ index.md
-│     └─ <note-id>-<slug>.md
-├─ 40-Resources/
+│     └─ <note-id>-<中文主题>.md
+├─ 40-资源/
 │  ├─ index.md
-│  └─ <web|paper|book|repository|other>/<resource-id>-<slug>.md
-├─ 50-Daily/
+│  └─ <web|paper|book|repository|other>/<resource-id>-<中文主题>.md
+├─ 50-日记/
 │  └─ <year>/YYYY-MM-DD.md
-├─ 60-Archive/
-├─ 90-System/
+├─ 60-归档/
+├─ 90-系统/
 │  ├─ second-brain.md
 │  ├─ schemas/schema-v2.md
 │  └─ templates/
-└─ attachments/
+└─ 附件/
 ```
 
-Skill 提供的 16 个模板只是首次建库的种子；写入 Vault 后，`90-System/templates/` 的本地模板和
-`90-System/second-brain.md` 中记录的 Schema 2 是该 Vault 的运行时约定；安装目录的 `assets/vault-schemas/`
+Skill 提供的 16 个模板只是首次建库的种子；写入 Vault 后，所选布局中的 `templates/` 和系统清单记录的 Schema 2 是该 Vault 的运行时约定；安装目录的 `assets/vault-schemas/`
 只用于 bootstrap、repair 或 fallback。模板更新必须展示差异并确认，不从安装目录静默覆盖。
 
 ### 三层内容流（保留逻辑，不等于只允许三层目录）
 
 ```text
 收集层                         项目层                         长期层
-00-Inbox / 50-Daily  ───────> 10-Projects  ───────────────> 20-Areas / 30-Knowledge
+00-收件箱 / 50-日记  ───────> 10-项目  ───────────────> 20-领域 / 30-知识
       │                            │                              │
       └─ 丢弃或保留原始记录         └─ 项目专属内容留在项目内        └─ 经复核的唯一权威知识
 
-40-Resources ───────────────> 为任意层提供外部来源和证据
-60-Archive / 90-System ─────> 生命周期和系统支持，不参与知识晋升
+40-资源 ────────────────────> 为任意层提供外部来源和证据
+60-归档 / 90-系统 ──────────> 生命周期和系统支持，不参与知识晋升
 ```
 
 ### 单一权威位置
 
 | 信息 | 唯一权威位置 |
 | --- | --- |
-| 项目身份、规范化远端和导航 | `10-Projects/<project-id>/index.md` |
-| 当前项目目标、进度、阻塞和下一步 | `10-Projects/<project-id>/status.md` |
-| 某次工作的事实和验证 | `10-Projects/<project-id>/sessions/` |
-| 可复现实验 | `10-Projects/<project-id>/experiments/` |
-| 已接受的项目决策 | `10-Projects/<project-id>/decisions/` |
-| 项目内尚未沉淀的经验 | `10-Projects/<project-id>/lessons/<lesson-id>.md` |
-| 跨项目复用的权威知识 | `30-Knowledge/<topic>/<note-id>.md` |
-| 主题导航和知识地图 | `30-Knowledge/<topic>/index.md` |
-| 领域导航和知识地图 | `20-Areas/<area-id>/index.md` |
-| 外部资料摘要和出处 | `40-Resources/` |
+| 项目身份、规范化远端和导航 | `10-项目/<project-id>/index.md` |
+| 当前项目目标、进度、阻塞和下一步 | `10-项目/<project-id>/status.md` |
+| 某次工作的事实和验证 | `10-项目/<project-id>/sessions/` |
+| 可复现实验 | `10-项目/<project-id>/experiments/` |
+| 已接受的项目决策 | `10-项目/<project-id>/decisions/` |
+| 项目内尚未沉淀的经验 | `10-项目/<project-id>/lessons/<lesson-id>.md` |
+| 跨项目复用的权威知识 | `30-知识/<topic>/<note-id>.md` |
+| 主题导航和知识地图 | `30-知识/<topic>/index.md` |
+| 领域导航和知识地图 | `20-领域/<area-id>/index.md` |
+| 外部资料摘要和出处 | `40-资源/` |
 
 同一正文不得在多个位置复制。Area、项目和 Daily 通过链接引用权威笔记，借鉴 Trilium 的“多处出现、
 单一实体”思想，但保持普通 Markdown 实现。所有跨目录链接使用 Vault 根相对、路径限定 Wikilink，优先写成
-`[[10-Projects/<project-id>/status|项目状态]]` 这类形式，不带前导 `/`，也不使用只依赖笔记 basename 的全库 identifier link。
+新建中文 Vault 使用 `[[10-项目/<project-id>/status|项目状态]]`；既有 ASCII Vault 使用其既有目录路径。两者都不带前导 `/`，也不使用只依赖笔记 basename 的全库 identifier link。
 
 ## 元数据优化
 
@@ -210,7 +209,7 @@ supersedes: []
 
 结合 Syncthing 时，自动写入优先使用不可重名的追加式文件：
 
-- Inbox：`<timestamp>-<device-id>-<slug>.md`。
+- Inbox：`<timestamp>-<device-id>-<中文主题>.md`。
 - Session：`<timestamp>-<device-id>.md`。
 - 实验和决策：创建后以追加和小范围修改为主。
 - Codex 不应在多台设备上自动追加同一个 Daily 文件。

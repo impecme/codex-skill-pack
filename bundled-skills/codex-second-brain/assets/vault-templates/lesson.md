@@ -15,7 +15,7 @@ tags: []
 
 # {{LESSON_TITLE}}
 
-项目：[[10-Projects/{{PROJECT_ID}}/index|项目索引]]
+项目：[[{{PATH_PROJECTS}}/{{PROJECT_ID}}/index|项目索引]]
 
 ## 情境
 

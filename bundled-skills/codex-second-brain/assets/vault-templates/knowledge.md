@@ -16,7 +16,7 @@ tags: []
 
 # {{TITLE}}
 
-所属主题：[[30-Knowledge/{{TOPIC_ID}}/index|主题索引]]
+所属主题：[[{{PATH_KNOWLEDGE}}/{{TOPIC_ID}}/index|主题索引]]
 
 ## 摘要
 

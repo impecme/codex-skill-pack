@@ -138,10 +138,10 @@ MCPVault 官方安全公告 GHSA-9c83-rr99-vfwj 说明：
 
     SecondBrain/
     ├─ index.md
-    ├─ 00-Inbox/
-    │  ├─ <year>/<month>/<timestamp>-<device-short>-<slug>.md
-    │  └─ weekly-review-<year>-W<week>-<device-short>.md
-    ├─ 10-Projects/
+    ├─ 00-收件箱/
+    │  ├─ <year>/<month>/<timestamp>-<device-short>-<中文主题>.md
+    │  └─ 每周整理-<year>-W<week>-<device-short>.md
+    ├─ 10-项目/
     │  ├─ index.md
     │  └─ <project-id>/
     │     ├─ index.md
@@ -150,29 +150,29 @@ MCPVault 官方安全公告 GHSA-9c83-rr99-vfwj 说明：
     │     ├─ decisions/
     │     ├─ experiments/
     │     └─ lessons/<lesson-id>.md
-    ├─ 20-Areas/
+    ├─ 20-领域/
     │  ├─ index.md
     │  └─ <area-id>/index.md
-    ├─ 30-Knowledge/
+    ├─ 30-知识/
     │  ├─ index.md
     │  └─ <topic>/
     │     ├─ index.md
-    │     └─ <note-id>-<slug>.md
-    ├─ 40-Resources/
+    │     └─ <note-id>-<中文主题>.md
+    ├─ 40-资源/
     │  ├─ index.md
-    │  └─ <web|paper|book|repository|other>/<resource-id>-<slug>.md
-    ├─ 50-Daily/<year>/
-    ├─ 60-Archive/
-    ├─ 90-System/
+    │  └─ <web|paper|book|repository|other>/<resource-id>-<中文主题>.md
+    ├─ 50-日记/<year>/
+    ├─ 60-归档/
+    ├─ 90-系统/
     │  ├─ second-brain.md
     │  ├─ schemas/schema-v2.md
     │  └─ templates/
-    └─ attachments/
+    └─ 附件/
 
 项目入口使用 `index.md`，当前状态使用 `status.md`，经验写入 `lessons/` 下的原子笔记；每个主题目录拥有自己的
-`index.md`。跨目录链接使用 Vault 根相对、路径限定 Wikilink（例如 `[[10-Projects/<project-id>/status|项目状态]]`），
+`index.md`。跨目录链接使用 Vault 根相对、路径限定 Wikilink（新建中文布局示例 `[[10-项目/<project-id>/status|项目状态]]`），
 不带前导 `/` 或 `.md`，不依赖全库同名解析。
-Skill 提供的 16 个模板只作为种子，初始化后 Vault 内 `90-System/templates/` 是权威模板目录。
+Skill 提供的 16 个模板只作为种子；新建 Vault 默认用中文一级目录，既有 ASCII Vault 保留原布局。初始化后，所选布局中的 `templates/` 是权威模板目录。
 
 项目代码仓库不要放进 Vault。Vault 的本机绝对路径只保存在
 `<CodexHome>/second-brain/config.json`，不得写入项目仓库。用户级 `AGENTS.md` 保存自然维护规则；项目通过规范化
@@ -184,7 +184,7 @@ Git remote 匹配 Vault 中的项目元数据，因此不同设备不需要各�
 
 - 读取明确指定的项目 `index.md`、`status.md`、每日笔记和主题索引。
 - 创建或补全一条带时间戳和设备 ID 的独立 Session。
-- 在 00-Inbox 创建带设备 ID 的独立整理草案。
+- 在当前 Vault 布局的 Inbox 目录创建带设备 ID 的独立整理草案。
 - 生成拟写入 diff。
 
 ### 必须确认
@@ -214,7 +214,7 @@ OpenAI 官方文档说明，Codex 桌面端的 Scheduled tasks 可以访问本�
 
 - 输入：过去七天每日笔记、项目 `index.md` 和 `status.md`。
 - 输出：知识沉淀候选、重复内容、过期事项和建议链接。
-- 写入位置：`00-Inbox/weekly-review-<year>-W<week>-<device-short>.md`。
+- 写入位置：当前布局 Inbox 目录下的 `每周整理-<year>-W<week>-<device-short>.md`。
 - 默认行为：不修改正式知识库、不删除文件、不自动 push。
 - 用户审核后，再调用 second-brain-weekly 应用变更。
 

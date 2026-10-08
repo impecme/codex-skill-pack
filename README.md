@@ -9,7 +9,7 @@
 完成用户级安装；首次安装 05 时还会引导配置 Windows 主 Vault 与 SSH Linux 服务器的 Syncthing 双机同步、服务器镜像和 PC 端 GitHub 人工备份。更新已安装版本时不会重跑双机配置。
 第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.12.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.14.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -119,15 +119,15 @@ GitHub、修改全局 Git 配置、创建或推送仓库、写入 Obsidian Vault
 [`global-agents-section.md`](bundled-skills/codex-second-brain/assets/global-agents-section.md) 作为受管区块合并到
 用户级 `<CodexHome>/AGENTS.md`，使 Skill 不依赖用户每次显式触发。
 
-该内置 Skill 的指令、生成模板和默认笔记内容均使用简体中文；机器字段、模式标识和
-ASCII 路径保持英文，以保证跨设备兼容性和升级稳定性。它坚持一个 Vault，不为每个项目建立独立事实源：
+该内置 Skill 的指令、生成模板和默认笔记内容均使用简体中文；新建笔记文件名中的可读主题部分和新建 Vault 的一级目录也优先使用中文。
+新建 Vault 默认采用带数字前缀的中文布局；既有 ASCII 布局继续兼容，升级不会迁移、重命名或创建重复目录。布局身份记录在系统清单中；检测到混合或不明确布局时停止相关写入。`index.md`/`status.md` 等固定系统文件名、项目内部目录、机器字段、模式标识和各类 ID 保持 ASCII。它坚持一个 Vault，不为每个项目建立独立事实源：
 
 - 设备之间只用 Syncthing 同步同一个主 Vault；GitHub 私有仓库只由指定设备人工 commit/push，作为备份和历史审查，不承担实时同步。
 - 项目使用 `index.md` 保存身份和导航，`status.md` 保存生命周期、当前目标、进度、阻塞和下一步；经验拆成 `lessons/` 下的原子笔记，避免一个不断膨胀的 lessons 文件。
-- 长期知识按 `30-Knowledge/<topic>/` 组织，每个主题有自己的 `index.md`，主题笔记保持单主题、可独立引用。
+- 长期知识按当前布局的 Knowledge 目录（新建 Vault 为 `30-知识/<topic>/`）组织，每个主题有自己的 `index.md`，主题笔记保持单主题、可独立引用。
 - 每个受管笔记都有不可变的“类型前缀 + UUIDv4”身份；`project_id` 继续表示规范化仓库映射，不与笔记 UUID 混用。
-- 内部链接使用 Vault 根相对、路径限定的 Wikilink（例如 `[[10-Projects/<project-id>/status|项目状态]]`），不带前导 `/` 或 `.md`，不依赖可能产生歧义的全库同名链接。
-- Skill 随包提供 16 个模板和 Schema 2 资产；初始化后，Vault 内 `90-System/templates/` 是模板权威，`90-System/schemas/schema-v2.md` 与系统清单记录当前约定，Skill 目录中的资产只用于 bootstrap、repair 或 fallback。
+- 内部链接使用 Vault 根相对、路径限定的 Wikilink（新建中文布局示例：`[[10-项目/<project-id>/status|项目状态]]`），不带前导 `/` 或 `.md`，不依赖可能产生歧义的全库同名链接。
+- Skill 随包提供 16 个模板和 Schema 2 资产；初始化后，Vault 内所选布局的 `templates/` 是模板权威，`schemas/schema-v2.md` 与系统清单记录当前约定，Skill 目录中的资产只用于 bootstrap、repair 或 fallback。
 - `setup`、`link`、`startup`、`checkpoint`、`shutdown`、`weekly`、`promote` 和 `repair` 是内部动作，不是用户操作清单。
 
 Schema 2 的稳定目录骨架如下：
@@ -135,38 +135,40 @@ Schema 2 的稳定目录骨架如下：
 ```text
 <Vault>/
 ├─ index.md
-├─ 00-Inbox/
-│  ├─ <year>/<month>/<timestamp>-<device-short>-<slug>.md
-│  └─ weekly-review-<year>-W<week>-<device-short>.md
-├─ 10-Projects/
+├─ 00-收件箱/
+│  ├─ <year>/<month>/<timestamp>-<device-short>-<中文主题>.md
+│  └─ 每周整理-<year>-W<week>-<device-short>.md
+├─ 10-项目/
 │  ├─ index.md
 │  └─ <project-id>/
 │     ├─ index.md
 │     ├─ status.md
-│     ├─ sessions/<year>/<timestamp>-<device-short>-<id8>.md
-│     ├─ decisions/<decision-id>-<slug>.md
-│     ├─ experiments/<experiment-id>-<slug>.md
-│     └─ lessons/<lesson-id>-<slug>.md
-├─ 20-Areas/
+│     ├─ sessions/<year>/<timestamp>-<device-short>-<id8>-<中文摘要>.md
+│     ├─ decisions/<decision-id>-<中文主题>.md
+│     ├─ experiments/<experiment-id>-<中文主题>.md
+│     └─ lessons/<lesson-id>-<中文主题>.md
+├─ 20-领域/
 │  ├─ index.md
 │  └─ <area-id>/index.md
-├─ 30-Knowledge/
+├─ 30-知识/
 │  ├─ index.md
 │  └─ <topic-id>/
 │     ├─ index.md
-│     └─ <knowledge-id>-<slug>.md
-├─ 40-Resources/
+│     └─ <knowledge-id>-<中文主题>.md
+├─ 40-资源/
 │  ├─ index.md
-│  └─ <web|paper|book|repository|other>/<resource-id>-<slug>.md
-├─ 50-Daily/
+│  └─ <web|paper|book|repository|other>/<resource-id>-<中文主题>.md
+├─ 50-日记/
 │  └─ <year>/<YYYY-MM-DD>.md
-├─ 60-Archive/
-├─ 90-System/
+├─ 60-归档/
+├─ 90-系统/
 │  ├─ second-brain.md
 │  ├─ schemas/schema-v2.md
 │  └─ templates/
-└─ attachments/
+└─ 附件/
 ```
+
+新建中文布局与既有 ASCII 布局的一级目录一一对应：`00-收件箱`/`00-Inbox`、`10-项目`/`10-Projects`、`20-领域`/`20-Areas`、`30-知识`/`30-Knowledge`、`40-资源`/`40-Resources`、`50-日记`/`50-Daily`、`60-归档`/`60-Archive`、`90-系统`/`90-System`、`附件`/`attachments`。新建时用中文；已有 Vault 按其运行时 Schema 和系统清单继续使用原布局。若两套标记混杂或无法识别，先报告并停止写入，不自动整理或迁移。`附件` 是推荐目录名，Obsidian 实际附件保存位置仍以 `.obsidian/app.json` 为准；本懒人包不擅自改该设置或移动附件。
 
 安装 `05` 时，Codex 会先分别确认设备角色与本机 Vault 路径：Windows 个人电脑是主 Vault 和唯一 GitHub 人工备份设备；SSH Linux 服务器只使用经你确认的空目录作为镜像，不创建第二份知识库。个人电脑的既有 Vault 保留原样；如果是新建空 Vault，先确认后按 Schema 2 初始化。服务器不会自行初始化笔记内容，而是在配对后接收 PC 主 Vault。
 在已记录配对对端的设备上重复安装 `05` 时，只读核验并保留当前配对、播种、晋级或双向状态，不会把 folder 暂停或退回首次安装网络基线。
