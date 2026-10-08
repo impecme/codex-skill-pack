@@ -9,7 +9,7 @@
 完成用户级安装；选择 05 时还会引导配置 Windows 主 Vault 与 SSH Linux 服务器的 Syncthing 双机同步、服务器镜像和 PC 端 GitHub 人工备份。
 第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.11.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.11.1`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -68,9 +68,9 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 
 该来源是基于官方仓库 [BruceLanLan/sol-luna-engineering-workflow](https://github.com/BruceLanLan/sol-luna-engineering-workflow) 的个人 fork。
 
-锁定 commit：`ada4058bfa2f6a7c718c72d7c2b9c555eb3eea38`
+锁定 commit：`c1376779ada82ed540e052a74d23538c07f1a1e6`
 
-模型配置：默认使用 `gpt-6-luna` + `max`；困难判断使用 `gpt-6.1-sol` + `max`。
+模型配置：默认使用 `gpt-6-luna` + `max`；困难判断使用 `gpt-6.1-sol` + `high`。
 
 安装到用户级 Codex 目录（通常是 `~/.codex`）：
 

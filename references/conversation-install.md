@@ -40,7 +40,7 @@
 
 ### `00` 的模型与配置
 
-安装 `00` 前检查当前客户端、账户或工作区明确暴露的可用模型及推理等级，核对 `gpt-6-luna`、`gpt-6.1-sol` 和 `max`。
+安装 `00` 前检查当前客户端、账户或工作区明确暴露的可用模型及推理等级，核对 `gpt-6-luna` + `max` 与 `gpt-6.1-sol` + `high`。
 官方模型存在不代表本机账户可用；无需为了预检发起付费模型请求。可用性无法确认时也按未验证处理。
 参见 [Codex 模型文档](https://developers.openai.com/codex/models)。
 
@@ -51,7 +51,7 @@ agent 配置；工作流 `AGENTS.md` 中绑定这些模型的路由指令也属�
 
 ## 固定来源
 
-- 工作流 fork：[impecme/sol-luna-engineering-workflow](https://github.com/impecme/sol-luna-engineering-workflow/tree/ada4058bfa2f6a7c718c72d7c2b9c555eb3eea38)
+- 工作流 fork：[impecme/sol-luna-engineering-workflow](https://github.com/impecme/sol-luna-engineering-workflow/tree/c1376779ada82ed540e052a74d23538c07f1a1e6)
 - 工作流上游：[BruceLanLan/sol-luna-engineering-workflow](https://github.com/BruceLanLan/sol-luna-engineering-workflow/tree/ed13d90a055630aa89427b20b8a0a2401dc8a47b)
 - 技能：[mattpocock/skills Engineering](https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015/skills/engineering)
 - GitHub/Obsidian 技能：[mathruffian-dot/codex-lazy-packs](https://github.com/mathruffian-dot/codex-lazy-packs/tree/574818e2d80b31807b74fcf62dd5b90b9e46ef3f)

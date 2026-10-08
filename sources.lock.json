@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "package": {
     "name": "codex-lazy-pack",
-    "version": "0.11.0"
+    "version": "0.11.1"
   },
   "generatedAt": "2026-10-08",
   "packs": [
@@ -78,7 +78,7 @@
         "url": "https://github.com/BruceLanLan/sol-luna-engineering-workflow",
         "commit": "ed13d90a055630aa89427b20b8a0a2401dc8a47b"
       },
-      "commit": "ada4058bfa2f6a7c718c72d7c2b9c555eb3eea38",
+      "commit": "c1376779ada82ed540e052a74d23538c07f1a1e6",
       "artifacts": [
         {
           "sourcePath": "AGENTS.md",
@@ -129,7 +129,7 @@
       "kind": "bundled-skill",
       "repository": "impecme/codex-skill-pack",
       "url": "https://github.com/impecme/codex-skill-pack",
-      "packageVersion": "0.11.0",
+      "packageVersion": "0.11.1",
       "vaultSchemaVersion": 2,
       "deviceConfigSchemaVersion": 2,
       "sourcePath": "bundled-skills/codex-second-brain",

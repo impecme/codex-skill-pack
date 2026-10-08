@@ -80,7 +80,7 @@ PAIRED_NETWORK_OPTIONS = {
     "announceLANAddresses": "false",
 }
 SUPPORTED_MIN_VERSION = (2, 1, 5)
-USER_AGENT = "codex-lazy-pack/0.11.0 Syncthing bootstrap"
+USER_AGENT = "codex-lazy-pack/0.11.1 Syncthing bootstrap"
 _SNAPSHOT_UNSET = object()
 _PROGRESS: dict[str, Any] = {"phase": "idle", "completed": [], "backupPath": None}
 

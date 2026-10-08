@@ -15,12 +15,12 @@ description: 通过对话安装固定 commit 的 Luna/Sol Codex 工程工作流�
 
 - 仓库：[impecme/sol-luna-engineering-workflow](https://github.com/impecme/sol-luna-engineering-workflow)
 - 上游仓库：[BruceLanLan/sol-luna-engineering-workflow](https://github.com/BruceLanLan/sol-luna-engineering-workflow)
-- 固定 commit：以 `sources.lock.json` 中的 `ada4058bfa2f6a7c718c72d7c2b9c555eb3eea38` 为准
+- 固定 commit：以 `sources.lock.json` 中的 `c1376779ada82ed540e052a74d23538c07f1a1e6` 为准
 - 目标文件：`AGENTS.md`、`.codex/config.toml`、`.codex/agents/luna-worker.toml`、`.codex/agents/sol-advisor.toml`
 
 ## 执行要求
 
-1. 执行共享安装规则的新设备预检，确定 `<CodexHome>`、有效全局规则和本机模型/`max` 可用性；无法确认的模型配置保持 `pending`，保留现有可运行设置。
+1. 执行共享安装规则的新设备预检，确定 `<CodexHome>`、有效全局规则，并分别检查 `gpt-6-luna` + `max` 与 `gpt-6.1-sol` + `high` 的本机可用性；无法确认的模型配置保持 `pending`，保留现有可运行设置。
 2. 按锁定 commit 读取四个上游文件，不复制上游 README、文档或贡献指南。
 3. 按以下映射安装到用户级 Codex 目录：
 
