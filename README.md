@@ -9,7 +9,7 @@
 完成用户级安装；选择 05 时还会引导配置 Windows 主 Vault 与 SSH Linux 服务器的 Syncthing 双机同步、服务器镜像和 PC 端 GitHub 人工备份。
 第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.10.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.11.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -50,7 +50,7 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 | `02` | `codex-github` | GitHub CLI、Git 配置和 GitHub 访问工作流 |
 | `03` | `codex-obsidian` | Obsidian Vault 授权、MCPVault 和读写验证工作流 |
 | `04` | `codex-github-obsidian` | GitHub 与 Obsidian 的联动工作流 |
-| `05` | `codex-second-brain` | 第二大脑 Skill、全局规则、本机 Syncthing 与用户登录后台启动 |
+| `05` | `codex-second-brain` | Windows PC 主 Vault、SSH Linux 镜像；分阶段 Syncthing 配对/首次传输/核验；仅 PC 人工 GitHub 备份（[双机引导](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)） |
 | `全部` | — | 依次安装 `00` 至 `05` |
 
 对应入口：

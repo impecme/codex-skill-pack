@@ -38,7 +38,7 @@
 5. **核验服务器接收。** 先在 PC 停写期间生成 manifest SHA-256，再在服务器运行 `verify-seed` 并提供该 64 位指纹。指纹参数为必填门槛；缺少或不相等时辅助程序拒绝返回 `seed-verified`，不得晋级。服务器 folder 必须为未暂停的 `receiveonly`、恰有一个已连接远端、Syncthing folder 状态为 `idle`，`needTotalItems`、`needBytes`、`needDeletes`、`pullErrors` 和 `receiveOnlyTotalItems` 均为零。manifest 只输出整体 SHA-256、文件/目录数和总字节，不输出路径名；它纳入相对路径、类型、大小和文件内容哈希，并排除 `.git`、`.claudian`、`.stignore`、`.stfolder`、`.obsidian/workspace*`。自定义忽略规则可能导致指纹不同；不匹配时保留单向模式，检查原因，不绕过门槛。
 6. **先晋级服务器。** 核验服务器接收后，用户再次确认双方应用写入者停写、PC 最新报告仍处于预期 `sendonly` 播种阶段并批准本阶段；Codex 才执行 `promote-server`（传入 `--confirmed-verified --confirmed-writers-paused --confirmed-peer-state` 和 PC 源 manifest SHA-256），把服务器从 `receiveonly` 改为 `sendreceive`。此时 PC 仍为 `sendonly`，所以尚未进入双向配置。继续停写，并核验服务器 status 及 manifest。
 7. **再晋级个人电脑。** 服务器 status 和 manifest 再次核验通过、唯一连接及同步状态符合要求后，用户确认服务器已晋级、双方应用写入者停写并批准本阶段；Codex 才执行 `promote-primary`（传入相同的三个确认标记和服务器 manifest SHA-256），把 PC 从 `sendonly` 改为 `sendreceive`。只有两端均为 `sendreceive` 后才进入双向配置状态；双向写入是否实际可用，仍须在用户另行授权探针后验证。
-8. **恢复日常维护。** 两边分别执行 `complete`，传入对端最近的 manifest SHA-256，并确认双方 status、连接、模式和内容一致。辅助程序再次核验本机 idle/无待同步项/错误并把本机 `<CodexHome>/second-brain/sync-onboarding.json` 标为 `active`。全局规则只有在本地 `status=active` 且没有 `pendingOperation` 时才恢复自动读取/写入 Vault；中断设备需在恢复后单独完成该核验。缺少对端最新证据时不得标记完成。状态文件不是跨设备同步成功的替代证据。
+8. **恢复日常维护。** 两边分别执行 `complete`，传入对端最近的 manifest SHA-256，并确认双方 status、连接、模式和内容一致。辅助程序在写入本机 `<CodexHome>/second-brain/sync-onboarding.json` 的 `active` 前，必须确认目标 folder 的规范化成员恰为本机与已绑定对端、唯一活动连接的 Device ID 恰为该对端、本机 folder 未暂停且为 `sendreceive`、本机同步状态 idle/无待同步项或错误，并且本机 manifest 与对端提供的 SHA-256 一致。成员、连接身份或内容任一不匹配时，拒绝标记完成，不自动修复 Syncthing 配置。全局规则只有在本地 `status=active` 且没有 `pendingOperation` 时才恢复自动读取/写入 Vault；中断设备需在恢复后单独完成该核验。缺少对端最新证据时不得标记完成。状态文件不是跨设备同步成功的替代证据。
 
 ## 网络、启动与本机安全
 
@@ -65,7 +65,7 @@
 | 接收核验 | 服务器唯一连接、`idle`、各项 needs/errors 为零；PC 与服务器 manifest 必须比较且 SHA-256 相等；未决冲突。 |
 | 服务器晋级 | 用户确认、服务器已 `sendreceive`、PC 仍 `sendonly`；服务器当前 status/manifest 和停写状态。不得报告双向同步已启用。 |
 | PC 晋级与双向核验 | 用户确认、两端均为 `sendreceive`、连接/状态/manifest 检查；双向写入探针是否另获授权及实际结果。未验证时标为待验证。 |
-| 完成引导 | 两端各自 `complete` 的核验结果与 onboarding 阶段；只有本机与对端证据均对上后才标记本地 `active`、恢复自然维护。 |
+| 完成引导 | 两端各自 `complete` 的核验结果：本机/对端 folder 成员、唯一连接的对端身份、本机 idle/无待同步项或错误、双方 manifest 和模式；只有本机校验与对端证据均对上后才标记本地 `active`、恢复自然维护。 |
 
 配置项已写入不等于设备发现或公共中继实际可达。没有连接验证前，不得声称设备已连通、公共中继可达、首次传输完成、服务器已 up-to-date 或双向同步已验证；本机配置或配对成功不等于多设备同步完成。
 

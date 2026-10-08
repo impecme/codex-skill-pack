@@ -334,7 +334,10 @@ def _folder_member_ids(folder: dict[str, Any]) -> list[str]:
     for member in members:
         if not isinstance(member, dict) or not isinstance(member.get("deviceID"), str):
             raise PairingError("folder-members-invalid", "目标 Vault 文件夹的设备列表含无效成员。")
-        values.append(base._normalized_device_id(member["deviceID"]))
+        device_id = member["deviceID"].strip().upper()
+        if not DEVICE_ID_RE.fullmatch(device_id):
+            raise PairingError("folder-member-id-invalid", "目标 Vault 文件夹含格式无效的设备 ID。")
+        values.append(base._normalized_device_id(device_id))
     if len(values) != len(set(values)):
         raise PairingError("folder-members-duplicate", "目标 Vault 文件夹含重复设备成员。")
     return values
@@ -1539,17 +1542,36 @@ def _complete(args: argparse.Namespace, codex_home: Path, vault: Path, api: Loca
     remotes = _known_remote_devices(codex_home, args.role, devices, own_id)
     if len(remotes) != 1:
         raise PairingError("peer-not-paired", "未找到唯一的已配对设备。")
+    peer_id = str(remotes[0].get("deviceID", ""))
     folder = _target_folder(folders, vault)
+    folder_members = _folder_member_ids(folder)
+    expected_members = {
+        base._normalized_device_id(own_id),
+        base._normalized_device_id(peer_id),
+    }
+    if len(folder_members) != 2 or set(folder_members) != expected_members:
+        raise PairingError(
+            "completion-folder-membership-conflict",
+            "目标 Vault 文件夹成员必须恰为本机与已绑定对端；保留当前状态，不标记引导完成。",
+        )
     if folder.get("type") != "sendreceive" or folder.get("paused") is not False:
         raise PairingError("bidirectional-state-conflict", "本机文件夹尚未处于活动 sendreceive 状态。")
-    connected, _ = _connections(api, own_id)
+    connected, connected_ids = _connections(api, own_id)
+    valid_connected_ids = [device_id.strip().upper() for device_id in connected_ids]
+    if (connected != 1 or len(valid_connected_ids) != 1
+            or not DEVICE_ID_RE.fullmatch(valid_connected_ids[0])
+            or base._normalized_device_id(valid_connected_ids[0]) != base._normalized_device_id(peer_id)):
+        raise PairingError(
+            "completion-peer-connection-conflict",
+            "唯一活动连接必须对应本机引导状态绑定的对端；保留当前状态，不标记引导完成。",
+        )
     db = _folder_status(api)
     manifest = _file_manifest(vault)
-    if (connected != 1 or not _folder_is_idle_and_clean(db)
+    if (not _folder_is_idle_and_clean(db)
             or manifest["manifestSha256"] != expected_peer_hash):
         raise PairingError("bidirectional-state-conflict", "本机与对端未满足连接、idle、无待同步项/错误和内容指纹一致的条件。")
     state = base.write_sync_onboarding_state(codex_home, args.role, "active")
-    return {"status": "active", "role": args.role, "syncthingDeviceId": own_id, "peerSyncthingDeviceId": remotes[0].get("deviceID"), "folderId": FOLDER_ID, "folderType": folder.get("type"), "folderPaused": folder.get("paused"), "connectedRemoteCount": connected, "folderStatus": db, "manifest": manifest, "onboardingState": state, "bidirectionalSmokeProbe": "not-run; would modify Vault content and needs separate user approval"}
+    return {"status": "active", "role": args.role, "syncthingDeviceId": own_id, "peerSyncthingDeviceId": peer_id, "folderId": FOLDER_ID, "folderType": folder.get("type"), "folderPaused": folder.get("paused"), "folderMembershipMatchesPair": True, "connectedRemoteCount": connected, "connectedDeviceIds": connected_ids, "folderStatus": db, "manifest": manifest, "onboardingState": state, "bidirectionalSmokeProbe": "not-run; would modify Vault content and needs separate user approval"}
 
 
 @_serialized_transition
