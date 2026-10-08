@@ -36,6 +36,8 @@
 
 Schema 2 内容格式不变；目录布局使用独立标识 `schema2-zh-cn` 或 `schema2-ascii`，在系统清单 frontmatter 的 `directory_layout` 中记录。新建 Vault 默认采用 `schema2-zh-cn`，保留数字前缀以稳定排序。已存在的 `schema2-ascii` Vault 继续使用原路径；安装或升级不迁移、不改名，也不创建平行中文目录。
 
+Vault 外层文件夹名不属于 Schema 2 或 `directory_layout`。新建 PC 主 Vault 默认建议使用中文外层目录名 `第二大脑`，完整路径由用户选定并确认；服务器镜像的绝对路径单独确认。已有 Vault 的外层名称不因安装或更新而更改；显式改名是独立路径迁移，需先停止相关写入/同步并核对两端配置与其他路径引用。
+
 | 逻辑目录 | 新建中文布局 `schema2-zh-cn` | 既有兼容布局 `schema2-ascii` |
 | --- | --- | --- |
 | Inbox | `00-收件箱` | `00-Inbox` |

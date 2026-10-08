@@ -9,7 +9,7 @@
 完成用户级安装；首次安装 05 时还会引导配置 Windows 主 Vault 与 SSH Linux 服务器的 Syncthing 双机同步、服务器镜像和 PC 端 GitHub 人工备份。更新已安装版本时不会重跑双机配置。
 第二大脑完成一次性配置后，会通过用户级全局规则自然融入项目工作，不需要手动提醒开工、记录或收工。
 
-当前懒人包版本：`0.14.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
+当前懒人包版本：`0.15.0`。个人第二大脑采用 Foam-inspired Schema 2；Vault schema 为 `2`，设备配置 schema 为 `2`。
 
 本项目采用“总入口 + 独立懒人包”的组织方式：
 
@@ -50,7 +50,7 @@ Codex profile 的新对话中验收文件安装、客户端发现和只读功能
 | `02` | `codex-github` | GitHub CLI、Git 配置和 GitHub 访问工作流 |
 | `03` | `codex-obsidian` | Obsidian Vault 授权、MCPVault 和读写验证工作流 |
 | `04` | `codex-github-obsidian` | GitHub 与 Obsidian 的联动工作流 |
-| `05` | `codex-second-brain` | Windows PC 主 Vault、SSH Linux 镜像；分阶段 Syncthing 配对/首次传输/核验；仅 PC 人工 GitHub 备份（[双机引导](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)） |
+| `05` | `codex-second-brain` | Windows PC 主 Vault（新建时外层目录建议名为“第二大脑”）、SSH Linux 镜像；分阶段 Syncthing 配对/首次传输/核验；仅 PC 人工 GitHub 备份（[双机引导](bundled-skills/codex-second-brain/references/syncthing-bootstrap.md)） |
 | `全部` | — | 依次安装 `00` 至 `05` |
 
 对应入口：
@@ -119,8 +119,10 @@ GitHub、修改全局 Git 配置、创建或推送仓库、写入 Obsidian Vault
 [`global-agents-section.md`](bundled-skills/codex-second-brain/assets/global-agents-section.md) 作为受管区块合并到
 用户级 `<CodexHome>/AGENTS.md`，使 Skill 不依赖用户每次显式触发。
 
-该内置 Skill 的指令、生成模板和默认笔记内容均使用简体中文；新建笔记文件名中的可读主题部分和新建 Vault 的一级目录也优先使用中文。
+该内置 Skill 的指令、生成模板和默认笔记内容均使用简体中文；新建笔记文件名中的可读主题部分和新建 Vault 的内部一级目录也优先使用中文。
 新建 Vault 默认采用带数字前缀的中文布局；既有 ASCII 布局继续兼容，升级不会迁移、重命名或创建重复目录。布局身份记录在系统清单中；检测到混合或不明确布局时停止相关写入。`index.md`/`status.md` 等固定系统文件名、项目内部目录、机器字段、模式标识和各类 ID 保持 ASCII。它坚持一个 Vault，不为每个项目建立独立事实源：
+
+Vault 外层文件夹名与内部 Schema 目录布局相互独立。新建 Windows 主 Vault 时，默认建议在你选定的父目录下使用中文文件夹名 `第二大脑`；Codex 会先展示完整绝对路径，得到确认后才创建。SSH 服务器镜像路径需单独确认，不能直接照搬 PC 的绝对路径。安装或更新不会重命名既有 Vault；如果你明确要求改名，必须作为独立迁移核对 Codex、Obsidian、Syncthing 两端及其他路径引用，并先停止相关写入和同步。
 
 - 设备之间只用 Syncthing 同步同一个主 Vault；GitHub 私有仓库只由指定设备人工 commit/push，作为备份和历史审查，不承担实时同步。
 - 项目使用 `index.md` 保存身份和导航，`status.md` 保存生命周期、当前目标、进度、阻塞和下一步；经验拆成 `lessons/` 下的原子笔记，避免一个不断膨胀的 lessons 文件。
@@ -170,7 +172,7 @@ Schema 2 的稳定目录骨架如下：
 
 新建中文布局与既有 ASCII 布局的一级目录一一对应：`00-收件箱`/`00-Inbox`、`10-项目`/`10-Projects`、`20-领域`/`20-Areas`、`30-知识`/`30-Knowledge`、`40-资源`/`40-Resources`、`50-日记`/`50-Daily`、`60-归档`/`60-Archive`、`90-系统`/`90-System`、`附件`/`attachments`。新建时用中文；已有 Vault 按其运行时 Schema 和系统清单继续使用原布局。若两套标记混杂或无法识别，先报告并停止写入，不自动整理或迁移。`附件` 是推荐目录名，Obsidian 实际附件保存位置仍以 `.obsidian/app.json` 为准；本懒人包不擅自改该设置或移动附件。
 
-安装 `05` 时，Codex 会先分别确认设备角色与本机 Vault 路径：Windows 个人电脑是主 Vault 和唯一 GitHub 人工备份设备；SSH Linux 服务器只使用经你确认的空目录作为镜像，不创建第二份知识库。个人电脑的既有 Vault 保留原样；如果是新建空 Vault，先确认后按 Schema 2 初始化。服务器不会自行初始化笔记内容，而是在配对后接收 PC 主 Vault。
+安装 `05` 时，Codex 会先分别确认设备角色与本机 Vault 路径：Windows 个人电脑是主 Vault 和唯一 GitHub 人工备份设备；SSH Linux 服务器只使用经你确认的空目录作为镜像，不创建第二份知识库。个人电脑的既有 Vault 路径和外层名称保留原样；如果是新建空 Vault，默认建议使用 `第二大脑` 作为外层目录名，先确认完整路径再按 Schema 2 初始化。服务器不会自行初始化笔记内容，而是在配对后接收 PC 主 Vault。
 在已记录配对对端的设备上重复安装 `05` 时，只读核验并保留当前配对、播种、晋级或双向状态，不会把 folder 暂停或退回首次安装网络基线。
 
 两台设备分别生成 Syncthing 配对卡，由你在两边 Codex 对话间人工传递。配对卡只包含设备标签、Syncthing Device ID、固定 folder ID、角色和传输方向；不含本地路径、第二大脑 `deviceId`、凭证或 SSH 私钥。配对时只登记双方设备和共享文件夹，保持暂停。初次传输前 PC 为 `sendonly`，服务器为 `receiveonly`；必须确认两端 Obsidian、Codex 和其他 Vault 写入者都已停写。首次传输后验证服务器 idle、无待同步项/错误/receive-only 本地差异，并比较双方内容 manifest SHA-256；通过后先将服务器切为 `sendreceive`，复核一致后再将 PC 切为 `sendreceive`。
@@ -182,7 +184,7 @@ Linux 无桌面服务器使用 systemd 用户服务；还需检查 `linger`，�
 ### 你仍需亲自介入的部分
 
 - 在 Windows 个人电脑和 SSH Linux 服务器各自的 Codex 环境中安装/执行一次 `05`。一个设备上的 Codex 不能代另一台设备写入本机配置或登录启动项。
-- 提供或确认两端的 Vault 绝对路径；如果 PC 主 Vault 为空，确认是否初始化 Schema 2；服务器目标路径必须为空，创建前会再次确认。
+- 提供或确认两端各自的 Vault 绝对路径；新建 PC 主 Vault 时可采用“所选父目录/第二大脑”，并确认完整路径；如果 PC 主 Vault 为空，确认是否初始化 Schema 2；服务器目标路径必须为空，创建前会再次确认。
 - 把两端 Codex 生成的 Syncthing 配对卡、服务器 `receiver-ready` 状态、manifest SHA-256 和后续核验结果，在两个对话间复制传递。卡片不含 Vault 路径或凭证。
 - 首次传输前，亲自确认两端 Obsidian、Codex、脚本等 Vault 写入者都已停止；在首次播种、服务器晋级和 PC 晋级各阶段按提示确认。Codex 不会假设另一台设备已停写。
 - 若服务器缺少 systemd linger，你需按提示自行执行管理员命令；如果公共 relay 出站被网络策略阻止，需你或管理员处理网络限制。Codex 不打开 GUI、不提权、不改防火墙或路由器。

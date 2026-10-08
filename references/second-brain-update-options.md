@@ -136,7 +136,9 @@ MCPVault 官方安全公告 GHSA-9c83-rr99-vfwj 说明：
 
 ## Schema 2 推荐 Vault 结构
 
-    SecondBrain/
+以下树中的 `第二大脑/` 是新建 PC 主 Vault 的推荐外层文件夹名，不属于 Vault 内部的 Schema 目录布局；实际绝对路径由用户选择并确认。
+
+    第二大脑/
     ├─ index.md
     ├─ 00-收件箱/
     │  ├─ <year>/<month>/<timestamp>-<device-short>-<中文主题>.md
